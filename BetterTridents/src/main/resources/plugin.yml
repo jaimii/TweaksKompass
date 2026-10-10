@@ -1,7 +1,0 @@
-name: BetterTridentsKompass
-version: '1.4'
-main: project.kompass.btk.BTK
-api-version: '1.21'
-paper-weight-mapping-namespace: mojang
-authors: [ Ptit_Dandy, JustJaimii ]
-description: Enhanced Tridents.

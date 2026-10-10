@@ -1,0 +1,8 @@
+name: TweaksKompass
+version: '1.5'
+main: project.kompass.tweakskompass.TweaksKompass
+api-version: '1.21'
+softdepend: [ConsumeFood2]
+paper-weight-mapping-namespace: mojang
+authors: [ JustJaimii ]
+description: A comprehensive tweaks module for Project Kompass.
