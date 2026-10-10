@@ -1,4 +1,5 @@
 ## The main tweak module for Project: Kompass 🧭
+*Originally a fork of BetterTridents by [Th3Dandy](https://github.com/Th3Dandy/Better-Tridents)
 
 Tweaks:
 
