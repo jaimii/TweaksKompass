@@ -13,7 +13,7 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BundleMeta
 
-class BundleCapacityListener(private val plugin: BTK) : Listener {
+class BundleCapacityListener(private val plugin: TweaksKompass) : Listener {
 
     private fun isEnabled(): Boolean {
         return plugin.config.getBoolean("food-and-storage.bundle-capacity.enabled", true)

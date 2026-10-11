@@ -160,7 +160,8 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
                     val block = world.getBlockAt(targetX, y, targetZ)
                     if (block.type == Material.WATER) {
                         val above = world.getBlockAt(targetX, y + 1, targetZ)
-                        if (above.isAir || !above.type.isSolid) {
+                        // Fixed: using above.type.isAir instead of above.isAir
+                        if (above.type.isAir || (!above.type.isSolid && above.type != Material.WATER)) {
                             val data = block.blockData
                             // Only freeze source water blocks to match vanilla Frost Walker mechanics
                             if (data is Levelled && data.level == 0) {
