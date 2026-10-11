@@ -1,0 +1,108 @@
+# TweaksKompass Configuration File
+
+# =========================================================================
+# CUSTOM ARMOR DURABILITY
+# =========================================================================
+# Multiplier applied directly to the raw durability damage.
+# - Set to 1.0 for standard vanilla durability loss.
+# - Set to 0.25 to only take 25% of standard durability damage (makes armor last 5x longer).
+armor-durability-multiplier: 0.2
+armor-durability-flat-modifier: 0
+
+# =========================================================================
+# FOOD & STORAGE EXTENSION
+# =========================================================================
+# A fixed, flat value added to or subtracted from the calculated damage.
+#
+# - Negative values (e.g., -1) act as "Durability Resistance" or "Damage Negation".
+#   For example, with a multiplier of 1.0 and a flat modifier of -1:
+#   * A minor hit that normally deals 1 durability damage becomes (1 * 1.0) - 1 = 0.
+#     This completely negates weak durability hits.
+#   * A heavy hit dealing 3 durability damage becomes (3 * 1.0) - 1 = 2.
+#
+# - Positive values (e.g., 1) add extra flat wear-and-tear on every hit, ensuring
+#   armor degrades even during minor skirmishes.
+always-eat-enabled: true
+bundle-capacity-stacks: 2
+turtle-brush-durability-cost: 16
+
+# =========================================================================
+# MAGICAL CAMPFIRE
+# =========================================================================
+magical-campfire:
+  enabled: true
+  campfire:
+    enabled: true
+    require-lit: true
+    amount: 1.0
+    range: 3
+    actionbar:
+      enabled: true
+      message: "<green>You feel the warmth healing you."
+  soul-campfire:
+    enabled: true
+    require-lit: true
+    amount: 1.5
+    range: 3
+    actionbar:
+      enabled: true
+      message: "<light_blue>The soul flame restores your energy."
+
+# =========================================================================
+# BETTER ELYTRAS
+# =========================================================================
+better-elytras:
+  # Speed limit while gliding (blocks per second). Default vanilla flight is ~30-35.
+  max-speed: 75.0
+
+  # Visual action bar speedometer format
+  speedometer-format: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
+  speedometer-colors:
+    low: "green"
+    low-threshold: 40.0
+    moderate: "gold"
+    moderateThreshold: 60.0
+    high: "red"
+
+  # Mid-air boost using Wind Charges while gliding
+  wind-charge-boost:
+    enabled: true
+    multiplier: 1.2
+    sound: "entity.wind_charge.wind_burst"
+    particle: "gust_emitter_large"
+
+  # Ground launch sequence using Wind Charges while wearing an Elytra
+  charged-jump:
+    enabled: true
+    vertical-force: 1.8
+    horizontal-force: 0.3
+    sound: "entity.generic.explode"
+    secondary-sound: "entity.wind_charge.wind_burst"
+
+  # Dropping TNT while gliding with Elytra
+  bombing:
+    enabled: true
+    cooldown-seconds: 1.0
+    fuse-ticks: 80
+    require-igniter: true # If true, player must right-click with Flint and Steel or Fire Charge
+    inherit-inertia: true # If true, TNT inherits the player's gliding velocity# BetterTridents Configuration File
+# =========================================================================
+# ARROW SPEED MULTIPLIERS
+# =========================================================================
+arrow-settings:
+  multipliers:
+    DEFAULT: 1.0
+    PLAYER: 1.0
+    SKELETON: 1.5
+    PILLAGER: 1.4
+    DROWNED: 1.2
+    STRAY: 1.5
+    BOGGED: 1.5
+    ILLUSIONER: 1.5
+# =========================================================================
+# LEAD ANY MOB
+# =========================================================================
+lead-any-mob:
+  # Allowed worlds for custom leashing and teleportation. Use ["ALL"] for all worlds.
+  worlds:
+    - "ALL"
