@@ -22,10 +22,10 @@ class TurtleScuteBrushListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onTurtleBrush(event: PlayerInteractEntityEvent) {
+        if (!plugin.config.getBoolean("turtle-brushing.enabled", true)) return
         if (event.hand != EquipmentSlot.HAND) return
         val turtle = event.rightClicked as? Turtle ?: return
 
-        // Only adult turtles can be brushed for scutes
         if (!turtle.isAdult) return
 
         val player = event.player
@@ -54,15 +54,17 @@ class TurtleScuteBrushListener(private val plugin: TweaksKompass) : Listener {
             ItemStack(Material.TURTLE_SCUTE)
         )
 
-        // 4. Consume brush durability (default 16 to match Armadillo brushing)
-        val durabilityCost = plugin.config.getInt("turtle-brush-durability-cost", 16)
+        // 4. Consume brush durability
+        val durabilityCost = plugin.config.getInt(
+            "turtle-brushing.brush-durability-cost",
+            plugin.config.getInt("turtle-brush-durability-cost", 16)
+        )
         damageBrush(player, item, durabilityCost)
     }
 
     private fun damageBrush(player: Player, item: ItemStack, amount: Int) {
         val meta = item.itemMeta as? Damageable ?: return
 
-        // Calculate Unbreaking mitigation
         if (item.containsEnchantment(Enchantment.UNBREAKING)) {
             val level = item.getEnchantmentLevel(Enchantment.UNBREAKING)
             var actualDamage = 0
@@ -79,7 +81,6 @@ class TurtleScuteBrushListener(private val plugin: TweaksKompass) : Listener {
         }
 
         if (meta.damage >= item.type.maxDurability) {
-            // Brush broke
             player.world.playSound(player.location, Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f)
             player.inventory.setItemInMainHand(null)
         } else {

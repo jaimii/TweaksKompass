@@ -13,9 +13,12 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BundleMeta
 
-class BundleCapacityListener(private val plugin: TweaksKompass) : Listener {
+class BundleCapacityListener(private val plugin: BTK) : Listener {
 
-    // Calculates the current internal weight of all stored items
+    private fun isEnabled(): Boolean {
+        return plugin.config.getBoolean("food-and-storage.bundle-capacity.enabled", true)
+    }
+
     private fun getBundleWeight(bundle: ItemStack): Int {
         val meta = bundle.itemMeta as? BundleMeta ?: return 0
         var weight = 0
@@ -29,22 +32,20 @@ class BundleCapacityListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBundleClick(event: InventoryClickEvent) {
+        if (!isEnabled()) return
+
         val player = event.whoClicked as? Player ?: return
         val cursor = event.cursor
         val current = event.currentItem
 
-        // Case 1: Holding an item on the cursor and right-clicking a bundle in the inventory
         if (event.click == ClickType.RIGHT && current != null && current.isBundle() && cursor != null && cursor.type != Material.AIR) {
-            if (cursor.isBundle()) return // Prevent nested bundles under our custom system
+            if (cursor.isBundle()) return
 
             event.isCancelled = true
             addItemToBundle(current, cursor, player)
             player.setItemOnCursor(cursor)
             event.setCurrentItem(current)
-        }
-
-        // Case 2: Holding a bundle on the cursor and right-clicking an item in the inventory
-        else if (event.click == ClickType.RIGHT && cursor != null && cursor.isBundle() && current != null && current.type != Material.AIR) {
+        } else if (event.click == ClickType.RIGHT && cursor != null && cursor.isBundle() && current != null && current.type != Material.AIR) {
             if (current.isBundle()) return
 
             event.isCancelled = true
@@ -56,7 +57,10 @@ class BundleCapacityListener(private val plugin: TweaksKompass) : Listener {
 
     private fun addItemToBundle(bundle: ItemStack, item: ItemStack, player: Player) {
         val meta = bundle.itemMeta as? BundleMeta ?: return
-        val capacityStacks = plugin.config.getInt("bundle-capacity-stacks", 1).coerceAtLeast(1)
+        val capacityStacks = plugin.config.getInt(
+            "food-and-storage.bundle-capacity.stacks",
+            plugin.config.getInt("bundle-capacity-stacks", 2)
+        ).coerceAtLeast(1)
         val maxCapacity = capacityStacks * 64
 
         val currentWeight = getBundleWeight(bundle)

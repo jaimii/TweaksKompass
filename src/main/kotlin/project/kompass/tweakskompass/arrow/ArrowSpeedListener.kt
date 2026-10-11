@@ -17,11 +17,14 @@ class ArrowSpeedListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onEntityShootBow(event: EntityShootBowEvent) {
+        if (!plugin.config.getBoolean("arrow-settings.enabled", true)) return
+
         val arrow = event.projectile as? AbstractArrow ?: return
         val shooter = event.entity
         val entityTypeName = shooter.type.name.uppercase()
 
-        val multiplier = plugin.cachedArrowMultipliers[entityTypeName] ?: plugin.defaultArrowMultiplier
+        // Uses specific multiplier, falling back to GLOBAL
+        val multiplier = plugin.cachedArrowMultipliers[entityTypeName] ?: plugin.globalArrowMultiplier
 
         if (multiplier <= 0.0 || multiplier == 1.0) return
 
@@ -85,7 +88,7 @@ class ArrowSpeedListener(private val plugin: TweaksKompass) : Listener {
             val hitEntity = event.hitEntity!!
             val shooter = arrow.shooter as Entity
 
-            if (shooter.shouldPassThrough(hitEntity)) {
+            if (shooter.shouldPassThrough(hitEntity, plugin)) {
                 // Cancel collision: Arrow phases through friendly mob teammates
                 event.isCancelled = true
                 return

@@ -17,16 +17,22 @@ class TweaksKompass : JavaPlugin() {
     private lateinit var speedometer: ElytraSpeedometerListener
     private lateinit var boostJumpHandler: ElytraBoostJumpListener
     private lateinit var bombingHandler: ElytraBombingListener
+    private lateinit var sieveListener: ChainmailSieveListener
 
-    // Arrow Systems
+    // Arrow
     lateinit var arrowTrackingManager: ArrowTrackingManager
         private set
     val customArrowVelocities = ConcurrentHashMap<UUID, Vector>()
     val cachedArrowMultipliers = HashMap<String, Double>()
-    var defaultArrowMultiplier: Double = 1.0
+
+    var globalArrowMultiplier: Double = 1.0
+        private set
+    var isSkeletonPassthroughEnabled: Boolean = true
+        private set
+    var isIllagerPassthroughEnabled: Boolean = true
         private set
 
-    // Leash Systems
+    // Leash
     lateinit var leashRegistry: LeashRegistry
         private set
     lateinit var leashManager: LeashManager
@@ -36,19 +42,21 @@ class TweaksKompass : JavaPlugin() {
         saveDefaultConfig()
         loadCachedArrowMultipliers()
 
+        ShieldListener.patchPaperGlobal(this)
+
         val pm = server.pluginManager
 
-        // Elytra listeners
+        // Inst Elytras
         speedLimiter = ElytraSpeedLimiterListener(this)
         speedometer = ElytraSpeedometerListener(this)
         boostJumpHandler = ElytraBoostJumpListener(this)
         bombingHandler = ElytraBombingListener(this)
 
-        // Initialize Arrow Systems
+        // Int Arrow
         arrowTrackingManager = ArrowTrackingManager(this).apply { start() }
         ArrowPacketListener.register(this)
 
-        // Initialize Leash Systems
+        // Int Leash
         leashRegistry = LeashRegistry()
         leashManager = LeashManager(this)
 
@@ -61,14 +69,18 @@ class TweaksKompass : JavaPlugin() {
         pm.registerEvents(TridentAnvilListener(), this)
         pm.registerEvents(SpearListener(), this)
         pm.registerEvents(ArmorDurabilityListener(this), this)
-        pm.registerEvents(PotionSoupStackListener(), this)
+        pm.registerEvents(PotionSoupStackListener(this), this)
         pm.registerEvents(BundleCapacityListener(this), this)
         pm.registerEvents(AlwaysEatListener(this), this)
         pm.registerEvents(EnchantablePetArmorListener(), this)
         pm.registerEvents(WindChargeListener(this), this)
         pm.registerEvents(TurtleScuteBrushListener(this), this)
+        pm.registerEvents(InventoryTotemListener(this), this)
+        pm.registerEvents(LadderListener(this), this)
+        pm.registerEvents(BoatListener(this), this)
+        pm.registerEvents(ShieldListener(this), this)
 
-        // Register Elytras listeners
+        // Register Elytra listeners
         pm.registerEvents(speedLimiter, this)
         pm.registerEvents(speedometer, this)
         pm.registerEvents(boostJumpHandler, this)
@@ -84,6 +96,10 @@ class TweaksKompass : JavaPlugin() {
         pm.registerEvents(LeashPortalListener(this), this)
         pm.registerEvents(LeashElytraBoostListener(this), this)
 
+        // Register Chainmail Sieve listener
+        sieveListener = ChainmailSieveListener(this).apply { startTask() }
+        pm.registerEvents(sieveListener, this)
+
         // Background Tasks
         val copperArmorListener = CopperArmorListener()
         pm.registerEvents(copperArmorListener, this)
@@ -94,7 +110,7 @@ class TweaksKompass : JavaPlugin() {
         pm.registerEvents(campfireListener, this)
         campfireListener.startCampfireTask()
 
-        logger.info("TweaksKompass v1.5 enabled successfully.")
+        logger.info("TweaksKompass v1.5 successfully initialized with modular configuration.")
     }
 
     override fun onDisable() {
@@ -104,17 +120,22 @@ class TweaksKompass : JavaPlugin() {
 
     fun loadCachedArrowMultipliers() {
         cachedArrowMultipliers.clear()
+
+        isSkeletonPassthroughEnabled = config.getBoolean("arrow-settings.skeleton-passthrough", true)
+        isIllagerPassthroughEnabled = config.getBoolean("arrow-settings.illager-passthrough", true)
+
         val section = config.getConfigurationSection("arrow-settings.multipliers")
         if (section != null) {
             for (key in section.getKeys(false)) {
-                if (key.equals("DEFAULT", ignoreCase = true)) {
-                    defaultArrowMultiplier = section.getDouble(key, 1.0)
+
+                if (key.equals("GLOBAL", ignoreCase = true) || key.equals("DEFAULT", ignoreCase = true)) {
+                    globalArrowMultiplier = section.getDouble(key, 1.0)
                 } else {
                     cachedArrowMultipliers[key.uppercase()] = section.getDouble(key, 1.0)
                 }
             }
         } else {
-            defaultArrowMultiplier = 1.0
+            globalArrowMultiplier = 1.0
         }
     }
 
@@ -131,6 +152,7 @@ class TweaksKompass : JavaPlugin() {
                 speedometer.updateValues()
                 boostJumpHandler.updateValues()
                 bombingHandler.updateValues()
+                sieveListener.reloadConfig()
                 sender.sendMessage("§a[TweaksKompass] Configuration reloaded successfully.")
                 return true
             }

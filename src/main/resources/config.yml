@@ -1,68 +1,75 @@
-# TweaksKompass Configuration File
+# =========================================================================
+#                       TWEAKSKOMPASS CONFIGURATION
+# =========================================================================
 
 # =========================================================================
-# CUSTOM ARMOR DURABILITY
+# 1. ARROW SETTINGS
 # =========================================================================
-# Multiplier applied directly to the raw durability damage.
-# - Set to 1.0 for standard vanilla durability loss.
-# - Set to 0.25 to only take 25% of standard durability damage (makes armor last 5x longer).
-armor-durability-multiplier: 0.2
-armor-durability-flat-modifier: 0
-
-# =========================================================================
-# FOOD & STORAGE EXTENSION
-# =========================================================================
-# A fixed, flat value added to or subtracted from the calculated damage.
-#
-# - Negative values (e.g., -1) act as "Durability Resistance" or "Damage Negation".
-#   For example, with a multiplier of 1.0 and a flat modifier of -1:
-#   * A minor hit that normally deals 1 durability damage becomes (1 * 1.0) - 1 = 0.
-#     This completely negates weak durability hits.
-#   * A heavy hit dealing 3 durability damage becomes (3 * 1.0) - 1 = 2.
-#
-# - Positive values (e.g., 1) add extra flat wear-and-tear on every hit, ensuring
-#   armor degrades even during minor skirmishes.
-always-eat-enabled: true
-bundle-capacity-stacks: 2
-turtle-brush-durability-cost: 16
-
-# =========================================================================
-# MAGICAL CAMPFIRE
-# =========================================================================
-magical-campfire:
+arrow-settings:
   enabled: true
-  campfire:
-    enabled: true
-    require-lit: true
-    amount: 1.0
-    range: 3
-    actionbar:
-      enabled: true
-      message: "<green>You feel the warmth healing you."
-  soul-campfire:
-    enabled: true
-    require-lit: true
-    amount: 1.5
-    range: 3
-    actionbar:
-      enabled: true
-      message: "<light_blue>The soul flame restores your energy."
+
+  # Friendly-fire collision pass-through toggles
+  skeleton-passthrough: true # Arrows shot by skeletons pass through fellow skeletons.
+  illager-passthrough: true # Arrows shot by pillagers & illusioners pass through other illagers.
+
+  # Speed multipliers applied to arrows shot by specific entity types.
+  multipliers:
+    GLOBAL: 1.0 # Applies to all on top the multipliers below.
+    PLAYER: 1.0
+    SKELETON: 1.5
+    PILLAGER: 1.4
+    DROWNED: 1.2
+    STRAY: 1.5
+    BOGGED: 1.5
+    ILLUSIONER: 1.5
 
 # =========================================================================
-# BETTER ELYTRAS
+# 2. BETTER BOATS (better-boats)
+# =========================================================================
+better-boats:
+  enabled: true
+
+  # Spacebar jump propulsion while in water or on ground
+  jump:
+    enabled: true
+    force: 0.35
+    sound-volume: 1.0
+    sound-pitch: 0.8
+
+  # Freezes water into Frosted Ice when riding boats with Frost Walker boots
+  frost-walker:
+    enabled: true
+
+  # Smooth buoyancy controller allowing boats to travel upstream/rapids
+  smooth:
+    enabled: true
+    sample-radius: 0.8
+    flat-tolerance: 0.05
+    target-offset: 0.1
+    strength: 0.4
+    damping: 0.1
+    max-vertical-speed: 0.5
+    minimum-change: 0.01
+
+# =========================================================================
+# 3. BETTER ELYTRAS (better-elytras)
 # =========================================================================
 better-elytras:
-  # Speed limit while gliding (blocks per second). Default vanilla flight is ~30-35.
+  enabled: true
+
+  # Speed limit while gliding (blocks per second). Vanilla flight is ~30-35.
   max-speed: 75.0
 
   # Visual action bar speedometer format
-  speedometer-format: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
-  speedometer-colors:
-    low: "green"
-    low-threshold: 40.0
-    moderate: "gold"
-    moderateThreshold: 60.0
-    high: "red"
+  speedometer:
+    enabled: true
+    format: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
+    colors:
+      low: "green"
+      low-threshold: 40.0
+      moderate: "gold"
+      moderate-threshold: 60.0
+      high: "red"
 
   # Mid-air boost using Wind Charges while gliding
   wind-charge-boost:
@@ -84,25 +91,170 @@ better-elytras:
     enabled: true
     cooldown-seconds: 1.0
     fuse-ticks: 80
-    require-igniter: true # If true, player must right-click with Flint and Steel or Fire Charge
-    inherit-inertia: true # If true, TNT inherits the player's gliding velocity# BetterTridents Configuration File
+    require-igniter: true # Requires Flint and Steel or Fire Charge in hand
+    inherit-inertia: true # TNT inherits player's flight velocity
+
 # =========================================================================
-# ARROW SPEED MULTIPLIERS
+# 4. BETTER LADDERS (better-ladders)
 # =========================================================================
-arrow-settings:
-  multipliers:
-    DEFAULT: 1.0
-    PLAYER: 1.0
-    SKELETON: 1.5
-    PILLAGER: 1.4
-    DROWNED: 1.2
-    STRAY: 1.5
-    BOGGED: 1.5
-    ILLUSIONER: 1.5
+better-ladders:
+  enabled: true
+  quick-climb: true # Right-click ladder with empty hand to warp to top/bottom
+  chain-place: true # Sneak right-click with ladder to place down the column
+  prevent-breaking: true # Allows ladders to stay intact without a support block
+
 # =========================================================================
-# LEAD ANY MOB
+# 5. CHAINMAIL SIEVE (chainmail-sieve)
+# =========================================================================
+chainmail-sieve:
+  enabled: true
+  durability-cost: 1 # Helmet durability deducted per broken block
+  drop-item: true
+  particles: true
+  sounds: true
+  supported-materials:
+    - "SAND"
+    - "RED_SAND"
+    - "GRAVEL"
+    - "SUSPICIOUS_SAND"
+    - "SUSPICIOUS_GRAVEL"
+
+# =========================================================================
+# 6. COPPER ARMOR HAZARDS (copper-armor)
+# =========================================================================
+copper-armor:
+  enabled: true
+  # Check interval in ticks (600 ticks = 30 seconds)
+  check-interval: 600
+  # Probability per piece of being struck during storms (0.25 = 25% per piece)
+  strike-chance-per-piece: 0.25
+  # Ambient electrical spark particles around players wearing copper during storms
+  ambient-sparks: true
+
+# =========================================================================
+# 7. CUSTOM ARMOR DURABILITY (custom-armor-durability)
+# =========================================================================
+custom-armor-durability:
+  enabled: true
+
+  # Multiplier applied directly to raw durability damage.
+  # - Set to 1.0 for vanilla durability loss.
+  # - Set to 0.2 to only take 20% durability damage (armor lasts 5x longer).
+  multiplier: 0.2
+
+  # Flat integer added or subtracted after the multiplier.
+  # - Negative values (e.g., -1) act as "Damage Negation" against weak hits.
+  # - Positive values (e.g., 1) add extra wear-and-tear per hit.
+  flat-modifier: 0
+
+# =========================================================================
+# 8. ENCHANTABLE PET ARMOR (enchantable-pet-armor)
+# =========================================================================
+enchantable-pet-armor:
+  enabled: true
+  # Allows combining Protection, Fire, Blast, Projectile, Thorns, and Mending
+  # onto Wolf Armor, Horse Armor, and Nautilus Armor in an anvil.
+  allow-cross-protection: true
+
+# =========================================================================
+# 9. FOOD & STORAGE EXTENSION (food-and-storage)
+# =========================================================================
+food-and-storage:
+  # Allows eating even when the hunger bar is full (hooks with ConsumeFood2)
+  always-eat:
+    enabled: true
+
+  # Configurable capacity of bundles (how many stacks a single bundle holds)
+  bundle-capacity:
+    enabled: true
+    stacks: 2 # 2 stacks = 128 items capacity
+
+  # Custom maximum stack sizes
+  custom-stacks:
+    enabled: true
+    potions: 8
+    soups: 16
+    cakes: 16
+    totems: 4
+
+# =========================================================================
+# 10. INVENTORY TOTEM OF UNDYING (inventory-totem)
+# =========================================================================
+# Activates Totems of Undying from ANY inventory slot (excluding shulkers & bundles)
+inventory-totem:
+  enabled: true
+
+# =========================================================================
+# 11. LEAD ANY MOB (lead-any-mob)
 # =========================================================================
 lead-any-mob:
+  enabled: true
   # Allowed worlds for custom leashing and teleportation. Use ["ALL"] for all worlds.
   worlds:
     - "ALL"
+
+# =========================================================================
+# 12. MAGICAL CAMPFIRE (magical-campfire)
+# =========================================================================
+magical-campfire:
+  enabled: true
+  campfire:
+    enabled: true
+    require-lit: true
+    amount: 1.0 # Half-heart per interval
+    range: 3
+    actionbar:
+      enabled: true
+      message: "<green>You feel the warmth healing you."
+  soul-campfire:
+    enabled: true
+    require-lit: true
+    amount: 1.5
+    range: 3
+    actionbar:
+      enabled: true
+      message: "<cyan>The soul flame restores your energy."
+
+# =========================================================================
+# 13. SHIELD COMBAT SYSTEM (shield-settings)
+# =========================================================================
+shield-settings:
+  enabled: true
+  instant-block: true # Removes the vanilla 5-tick (0.25s) shield raise delay
+  auto-patch-paper-stun: true # Ensures paper-global.yml enables skip-vanilla-damage-tick-when-shield-blocked
+  axe-disable-ticks: 100 # Cooldown applied when disabled by an axe (100 ticks = 5 seconds)
+
+# =========================================================================
+# 14. SPEAR COMBAT (spear-settings)
+# =========================================================================
+spear-settings:
+  enabled: true
+  # Matches attack speed to the lunge animation duration (12 ticks = 6-tick cooldown feel)
+  lunge-fast-cooldown: true
+
+# =========================================================================
+# 15. TRIDENT COMBAT & ENCHANTMENTS (trident-settings)
+# =========================================================================
+trident-settings:
+  enabled: true
+  reach-distance: 4.5 # Matches vanilla spear reach
+  attack-speed: 1.3 # Midpoint between Sword (1.6) and Axe (1.0)
+  all-weather-riptide: true # Riptide on dry land has a 5s cooldown; rain/water has 0s cooldown
+  channeling-all-items: true # Melee hits with any Channeling item summon lightning
+  protect-mob-drops: true # Lightning from Channeling will not destroy drops from the killed mob
+
+# =========================================================================
+# 16. TURTLE SCUTE BRUSHING (turtle-brushing)
+# =========================================================================
+turtle-brushing:
+  enabled: true
+  # Durability cost on the brush (16 matches vanilla Armadillo brushing)
+  brush-durability-cost: 16
+
+# =========================================================================
+# 17. WIND CHARGE & WIND BURST (wind-charge)
+# =========================================================================
+wind-charge:
+  enabled: true
+  # Bypasses Blast Protection IV, Netherite, and Armor Trim dampening
+  ignore-armor-dampening: true

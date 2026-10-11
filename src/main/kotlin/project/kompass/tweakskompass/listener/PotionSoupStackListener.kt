@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.EnumSet
 
-class PotionSoupStackListener : Listener {
+class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
         private val STACK_TARGET_MATERIALS: Set<Material> = EnumSet.of(
@@ -33,45 +33,44 @@ class PotionSoupStackListener : Listener {
         )
     }
 
-    // Nanosecond O(1) bitmask check
     private fun isStackTarget(item: ItemStack?): Boolean {
+        if (!plugin.config.getBoolean("food-and-storage.custom-stacks.enabled", true)) return false
         return item != null && STACK_TARGET_MATERIALS.contains(item.type)
     }
 
     private fun updateStackSize(item: ItemStack?) {
         if (item == null || item.type == Material.AIR) return
+        if (!plugin.config.getBoolean("food-and-storage.custom-stacks.enabled", true)) return
         val type = item.type
 
-        // 1. Potions: Custom stack size 8
+        val potionLimit = plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
+        val soupLimit = plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
+        val cakeLimit = plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
+        val totemLimit = plugin.config.getInt("food-and-storage.custom-stacks.totems", 4)
+
         if (type == Material.POTION || type == Material.SPLASH_POTION || type == Material.LINGERING_POTION) {
             val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != 8)) {
-                meta.setMaxStackSize(8)
+            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != potionLimit)) {
+                meta.setMaxStackSize(potionLimit)
                 item.itemMeta = meta
             }
-        }
-        // 2. Soups and Stews: Custom stack size 16
-        else if (type == Material.MUSHROOM_STEW || type == Material.RABBIT_STEW ||
+        } else if (type == Material.MUSHROOM_STEW || type == Material.RABBIT_STEW ||
             type == Material.BEETROOT_SOUP || type == Material.SUSPICIOUS_STEW) {
             val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != 16)) {
-                meta.setMaxStackSize(16)
+            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != soupLimit)) {
+                meta.setMaxStackSize(soupLimit)
                 item.itemMeta = meta
             }
-        }
-        // 3. Cakes: Custom stack size 16
-        else if (type == Material.CAKE) {
+        } else if (type == Material.CAKE) {
             val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != 16)) {
-                meta.setMaxStackSize(16)
+            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != cakeLimit)) {
+                meta.setMaxStackSize(cakeLimit)
                 item.itemMeta = meta
             }
-        }
-        // 4. Totems of Undying: Custom stack size 4
-        else if (type == Material.TOTEM_OF_UNDYING) {
+        } else if (type == Material.TOTEM_OF_UNDYING) {
             val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != 4)) {
-                meta.setMaxStackSize(4)
+            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != totemLimit)) {
+                meta.setMaxStackSize(totemLimit)
                 item.itemMeta = meta
             }
         }
@@ -149,10 +148,10 @@ class PotionSoupStackListener : Listener {
 
             if (isPotion || isSoup || isCake || isTotem) {
                 val max = when {
-                    isPotion -> 8
-                    isSoup -> 16
-                    isCake -> 16
-                    isTotem -> 4
+                    isPotion -> plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
+                    isSoup -> plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
+                    isCake -> plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
+                    isTotem -> plugin.config.getInt("food-and-storage.custom-stacks.totems", 4)
                     else -> 64
                 }
                 val newAmount = Math.min(oldCursor.amount + cursor.amount, max)

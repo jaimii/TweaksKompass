@@ -23,7 +23,6 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
     private val trackedArrows = CopyOnWriteArrayList<TrackedArrow>()
     private var tickTask: BukkitTask? = null
 
-    // Pre-allocated reusable location to eliminate GC pressure
     private val tempLoc = Location(null, 0.0, 0.0, 0.0)
 
     fun start() {
@@ -38,7 +37,6 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                 val arrow = tracked.arrow
                 val shooter = tracked.shooter
 
-                // Cleanup on despawn/invalidation or 5s lifetime (100 ticks)
                 if (!arrow.isValid || currentTime - tracked.spawnTime > 5000) {
                     trackedArrows.remove(tracked)
                     plugin.customArrowVelocities.remove(arrow.uniqueId)
@@ -66,7 +64,7 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                     val distance = sqrt(distanceSq)
                     val direction = Vector(dx / distance, dy / distance, dz / distance)
 
-                    // Raytrace collision check
+                    // Raytrace collision check respecting config toggles
                     val result = arrow.world.rayTraceEntities(
                         tracked.lastLoc,
                         direction,
@@ -78,7 +76,7 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                                 entity !is ArmorStand &&
                                 !entity.isDead &&
                                 entity.uniqueId != shooter.uniqueId &&
-                                !shooter.shouldPassThrough(entity)
+                                !shooter.shouldPassThrough(entity, plugin)
                     }
 
                     if (result != null && result.hitEntity is LivingEntity) {
