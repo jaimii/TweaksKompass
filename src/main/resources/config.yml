@@ -32,31 +32,42 @@ armor-trims:
     # Matching Set: Effects applied when all 4 pieces share the same pattern
     # Format: - "EFFECT_NAME,AMPLIFIER" (amplifier 0 = Level 1, 1 = Level 2)
     patterns:
-      SILENCE:
-        - "INVISIBILITY,0"
-      FLOW:
-        - "SPEED,1"
-      TIDE:
-        - "DOLPHINS_GRACE,0"
-        - "WATER_BREATHING,0"
-      BOLT:
-        - "HASTE,1"
-      SPIRE:
-        - "JUMP_BOOST,1"
-      RIB:
-        - "FIRE_RESISTANCE,0"
-      VEX:
-        - "SLOW_FALLING,0"
-      WILD:
-        - "REGENERATION,0"
       SENTRY:
         - "RESISTANCE,0"
       DUNE:
-        - "STRENGTH,0"
+        - "HASTE,1"
       COAST:
-        - "CONDUIT_POWER,0"
-      EYE:
+        - "WATER_BREATHING,0"
+      WILD:
+        - "JUMP_BOOST,1"
+      WARD:
         - "NIGHT_VISION,0"
+      VEX:
+        - "SPEED,0"
+      TIDE:
+        - "CONDUIT_POWER,0"
+      SNOUT:
+        - "FIRE_RESISTANCE,0"
+      RIB:
+        - "REGENERATION,0"
+      EYE:
+        - "HEALTH_BOOST,1"
+      SPIRE:
+        - "SLOW_FALLING,0"
+      SILENCE:
+        - "STRENGTH,0"
+      WAYFINDER:
+        - "NONE"
+      RAISER:
+        - "NONE"
+      SHAPER:
+        - "NONE"
+      HOST:
+        - "NONE"
+      FLOW:
+        - "NONE"
+      BOLT:
+        - "SATURATION,0"
 
   # Ambient particles emitted around players wearing full matching sets
   particles:

@@ -5,7 +5,9 @@ import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.NamespacedKey
 import org.bukkit.Particle
+import org.bukkit.Registry
 import org.bukkit.entity.Piglin
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -35,7 +37,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         data class Matching(val pattern: String) : TrimState
     }
 
-    // High-performance cache: Maps player UUID -> Pre-computed trim state
     private val playerTrimStates = ConcurrentHashMap<UUID, TrimState>()
     private val appliedEffects = ConcurrentHashMap<UUID, MutableSet<PotionEffectType>>()
     private val patternEffects = HashMap<String, List<Pair<PotionEffectType, Int>>>()
@@ -56,14 +57,25 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
     }
 
     private fun setupParticleMappings() {
+        // Complete mappings for all 18 vanilla patterns
         patternParticles["SILENCE"] = Particle.SCULK_SOUL
         patternParticles["FLOW"] = Particle.SMALL_GUST
-        patternParticles["TIDE"] = Particle.BUBBLE_POP
         patternParticles["BOLT"] = Particle.ELECTRIC_SPARK
+        patternParticles["TIDE"] = Particle.BUBBLE_POP
         patternParticles["SPIRE"] = Particle.ENCHANT
         patternParticles["RIB"] = Particle.SOUL_FIRE_FLAME
         patternParticles["VEX"] = Particle.NOTE
         patternParticles["WILD"] = Particle.INFESTED
+        patternParticles["SENTRY"] = Particle.CRIT
+        patternParticles["DUNE"] = Particle.FALLING_DUST
+        patternParticles["COAST"] = Particle.SPLASH
+        patternParticles["EYE"] = Particle.PORTAL
+        patternParticles["SNOUT"] = Particle.FLAME
+        patternParticles["WARD"] = Particle.SCULK_CHARGE_POP
+        patternParticles["WAYFINDER"] = Particle.HAPPY_VILLAGER
+        patternParticles["RAISER"] = Particle.CLOUD
+        patternParticles["SHAPER"] = Particle.WAX_ON
+        patternParticles["HOST"] = Particle.SNOWFLAKE
     }
 
     fun reloadConfig() {
@@ -81,26 +93,41 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         val section = cfg.getConfigurationSection("armor-trims.effects.patterns") ?: return
 
         for (patternKey in section.getKeys(false)) {
-            val list = section.getStringList(patternKey)
-            val parsedList = mutableListOf<Pair<PotionEffectType, Int>>()
+            val upperKey = patternKey.uppercase()
 
+            // 1. Direct scalar "NONE" check (e.g. WAYFINDER: "NONE")
+            if (section.isString(patternKey)) {
+                val str = section.getString(patternKey)?.trim()
+                if (str.equals("NONE", ignoreCase = true)) {
+                    patternEffects[upperKey] = emptyList()
+                    continue
+                }
+            }
+
+            // 2. List check (e.g. WAYFINDER: ["NONE"] or WAYFINDER: [])
+            val list = section.getStringList(patternKey)
+            if (list.isEmpty() || (list.size == 1 && list[0].trim().equals("NONE", ignoreCase = true))) {
+                patternEffects[upperKey] = emptyList()
+                continue
+            }
+
+            val parsedList = mutableListOf<Pair<PotionEffectType, Int>>()
             for (entry in list) {
+                if (entry.trim().equals("NONE", ignoreCase = true)) continue
+
                 val parts = entry.split(",")
                 if (parts.size == 2) {
                     val effectName = parts[0].trim().lowercase()
-                    val key = org.bukkit.NamespacedKey.fromString(effectName) ?: org.bukkit.NamespacedKey.minecraft(effectName)
-                    val effectType = org.bukkit.Registry.POTION_EFFECT_TYPE.get(key) ?: continue
+                    val key = NamespacedKey.fromString(effectName) ?: NamespacedKey.minecraft(effectName)
+                    val effectType = Registry.POTION_EFFECT_TYPE.get(key) ?: continue
                     val amplifier = parts[1].trim().toIntOrNull() ?: 0
                     parsedList.add(Pair(effectType, amplifier))
                 }
             }
 
-            if (parsedList.isNotEmpty()) {
-                patternEffects[patternKey.uppercase()] = parsedList
-            }
+            patternEffects[upperKey] = parsedList
         }
 
-        // Re-evaluate online players on reload
         for (player in Bukkit.getOnlinePlayers()) {
             recalculateTrimState(player)
         }
@@ -111,7 +138,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
             override fun run() {
                 if (!isEnabled) return
 
-                // ZERO-ALLOCATION TICK LOOP: Simply reads pre-cached states
                 for (player in Bukkit.getOnlinePlayers()) {
                     if (!player.isValid || player.isDead || player.gameMode == GameMode.SPECTATOR) {
                         clearEffects(player)
@@ -131,7 +157,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         }.runTaskTimer(plugin, 10L, 10L)
     }
 
-    // Only evaluates ItemMeta when armor is physically changed!
     private fun recalculateTrimState(player: Player) {
         val armor = player.inventory.armorContents
 
@@ -196,7 +221,10 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
 
     private fun applyMatchingTrimEffects(player: Player, patternName: String) {
         if (!isEffectsEnabled) return
-        val effects = patternEffects[patternName] ?: run {
+        val effects = patternEffects[patternName]
+
+        // If the pattern is not configured or explicitly set to NONE / empty list:
+        if (effects == null || effects.isEmpty()) {
             clearEffects(player)
             return
         }
