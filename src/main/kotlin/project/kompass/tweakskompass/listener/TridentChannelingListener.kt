@@ -1,7 +1,7 @@
 package project.kompass.tweakskompass.listener
 
 import project.kompass.tweakskompass.TweaksKompass
-import project.kompass.tweakskompass.util.KompassUtil
+import project.kompass.tweakskompass.util.TridentUtil
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import org.bukkit.Bukkit
@@ -41,7 +41,7 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
 
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 val strike = trident.world.spawn(targetLoc, LightningStrike::class.java)
-                strike.persistentDataContainer.set(KompassUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE, 1.toByte())
+                strike.persistentDataContainer.set(TridentUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE, 1.toByte())
                 shooter?.let { strike.causingPlayer = it }
 
                 if (hitEntity is LivingEntity && hitEntity.isValid && !hitEntity.isDead) {
@@ -65,7 +65,7 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
 
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 val strike = victim.world.spawn(targetLoc, LightningStrike::class.java)
-                strike.persistentDataContainer.set(KompassUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE, 1.toByte())
+                strike.persistentDataContainer.set(TridentUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE, 1.toByte())
                 strike.causingPlayer = player
 
                 if (victim is LivingEntity && victim.isValid && !victim.isDead) {
@@ -83,7 +83,7 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         val entity = event.entity
 
         val isChanneling = lightning.persistentDataContainer.has(
-            KompassUtil.CHANNELING_LIGHTNING_KEY,
+            TridentUtil.CHANNELING_LIGHTNING_KEY,
             PersistentDataType.BYTE
         )
 
@@ -231,7 +231,7 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         if (event.cause == BlockIgniteEvent.IgniteCause.LIGHTNING) {
             val igniter = event.ignitingEntity as? LightningStrike ?: return
 
-            if (igniter.persistentDataContainer.has(KompassUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE)) {
+            if (igniter.persistentDataContainer.has(TridentUtil.CHANNELING_LIGHTNING_KEY, PersistentDataType.BYTE)) {
                 event.isCancelled = true
             }
         }

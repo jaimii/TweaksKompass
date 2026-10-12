@@ -1,6 +1,6 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.util.KompassUtil
+import project.kompass.tweakskompass.util.TridentUtil
 import org.bukkit.enchantments.Enchantment
 import org.bukkit.entity.*
 import org.bukkit.event.EventHandler
@@ -25,7 +25,7 @@ class RangedLootingListener : Listener {
         if (level > 0) {
             val projectile = event.projectile
             projectile.persistentDataContainer.set(
-                KompassUtil.LOOTING_KEY,
+                TridentUtil.LOOTING_KEY,
                 PersistentDataType.INTEGER,
                 level
             )
@@ -46,7 +46,7 @@ class RangedLootingListener : Listener {
             shooter = damager.shooter as? Player
         } else if (damager is Projectile) {
             level = damager.persistentDataContainer.getOrDefault(
-                KompassUtil.LOOTING_KEY,
+                TridentUtil.LOOTING_KEY,
                 PersistentDataType.INTEGER,
                 0
             )

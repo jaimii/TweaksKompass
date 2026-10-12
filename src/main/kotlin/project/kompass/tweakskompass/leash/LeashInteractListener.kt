@@ -1,13 +1,11 @@
 package project.kompass.tweakskompass.leash
 
-import project.kompass.tweakskompass.TweaksKompass
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.entity.LeashHitch
 import org.bukkit.entity.LivingEntity
-import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
@@ -16,6 +14,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.EquipmentSlot
+import project.kompass.tweakskompass.TweaksKompass
 
 class LeashInteractListener(
     private val plugin: TweaksKompass,
@@ -24,6 +23,7 @@ class LeashInteractListener(
 
     @EventHandler
     fun onPlayerInteractEntity(event: PlayerInteractEntityEvent) {
+        if (!plugin.config.getBoolean("lead-any-mob.enabled", true)) return
         if (event.hand != EquipmentSlot.HAND) return
         val entity = event.rightClicked as? LivingEntity ?: return
 
@@ -70,6 +70,7 @@ class LeashInteractListener(
 
     @EventHandler
     fun onFenceAttach(event: PlayerInteractEvent) {
+        if (!plugin.config.getBoolean("lead-any-mob.enabled", true)) return
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val clickedBlock = event.clickedBlock ?: return
 
@@ -79,12 +80,17 @@ class LeashInteractListener(
 
         val clickedLoc = clickedBlock.location
 
+        var hitch: LeashHitch? = clickedLoc.world.getNearbyEntities(clickedLoc.clone().add(0.5, 0.5, 0.5), 0.5, 0.5, 0.5)
+            .filterIsInstance<LeashHitch>()
+            .firstOrNull()
+
         for (nearby in player.getNearbyEntities(10.0, 10.0, 10.0)) {
             if (nearby is LivingEntity && nearby.isLeashed && player == nearby.leashHolder) {
                 if (!leashRegistry.isLeashableInVanilla(nearby.type)) {
-                    val hitch = nearby.world.spawn(clickedLoc, LeashHitch::class.java)
+                    if (hitch == null) {
+                        hitch = nearby.world.spawn(clickedLoc, LeashHitch::class.java)
+                    }
                     nearby.setLeashHolder(hitch)
-
                     plugin.leashManager.untrackLeash(player.uniqueId, nearby.uniqueId)
                     event.isCancelled = true
                 }

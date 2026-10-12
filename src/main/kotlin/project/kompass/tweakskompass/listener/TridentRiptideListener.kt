@@ -1,7 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.util.KompassUtil
-import project.kompass.tweakskompass.util.isTrident
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.enchantments.Enchantment
@@ -9,8 +7,11 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
+import project.kompass.tweakskompass.TweaksKompass
+import project.kompass.tweakskompass.util.TridentUtil
+import project.kompass.tweakskompass.util.isTrident
 
-class TridentRiptideListener : Listener {
+class TridentRiptideListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
         private const val TRIDENT_BASE_DAMAGE = 10.0
@@ -18,6 +19,9 @@ class TridentRiptideListener : Listener {
 
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (!plugin.config.getBoolean("trident-settings.enabled", true)) return
+        if (!plugin.config.getBoolean("trident-settings.all-weather-riptide", true)) return
+
         if (event.action != Action.RIGHT_CLICK_AIR && event.action != Action.RIGHT_CLICK_BLOCK) return
         if (!event.hasItem()) return
 
@@ -25,8 +29,9 @@ class TridentRiptideListener : Listener {
         if (!item.isTrident() || !item.containsEnchantment(Enchantment.RIPTIDE)) return
 
         val player = event.player
-        val isWet = KompassUtil.isPlayerWet(player)
+        val isWet = TridentUtil.isPlayerWet(player)
 
+        // All-Weather Riptide: Allows dry-land riptide with a 5-second (100-tick) cooldown
         if (!isWet && !player.hasCooldown(Material.TRIDENT)) {
             event.isCancelled = true
             val level = item.getEnchantmentLevel(Enchantment.RIPTIDE)

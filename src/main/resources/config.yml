@@ -3,18 +3,79 @@
 # =========================================================================
 
 # =========================================================================
-# 1. ARROW SETTINGS
+# 1. ANVIL OVERHAUL
+# ==========================================+==============================
+anvil-settings:
+  enabled: true
+  # Completely removes the vanilla "Too Expensive!" limit (costs of 40+ levels are allowed).
+  # Handles repairs with raw materials, item renaming, and enchantment combinations.
+  remove-too-expensive-limit: true
+
+# =========================================================================
+# 2. ARMOR TRIM OVERHAUL
+# =========================================================================
+armor-trims:
+  enabled: true
+
+  # Piglins will not attack players wearing any armor piece trimmed with Gold
+  gold-trim-piglin-pacify: true
+
+  # Status effects granted by wearing trimmed armor sets
+  effects:
+    enabled: true
+    refresh-seconds: 5
+
+    # Mixed Set: Awards Absorption II when wearing 4 trimmed pieces of different patterns
+    mixed-trims-absorption: true
+    mixed-absorption-amplifier: 1 # Amplifier 1 = Absorption II
+
+    # Matching Set: Effects applied when all 4 pieces share the same pattern
+    # Format: - "EFFECT_NAME,AMPLIFIER" (amplifier 0 = Level 1, 1 = Level 2)
+    patterns:
+      SILENCE:
+        - "INVISIBILITY,0"
+      FLOW:
+        - "SPEED,1"
+      TIDE:
+        - "DOLPHINS_GRACE,0"
+        - "WATER_BREATHING,0"
+      BOLT:
+        - "HASTE,1"
+      SPIRE:
+        - "JUMP_BOOST,1"
+      RIB:
+        - "FIRE_RESISTANCE,0"
+      VEX:
+        - "SLOW_FALLING,0"
+      WILD:
+        - "REGENERATION,0"
+      SENTRY:
+        - "RESISTANCE,0"
+      DUNE:
+        - "STRENGTH,0"
+      COAST:
+        - "CONDUIT_POWER,0"
+      EYE:
+        - "NIGHT_VISION,0"
+
+  # Ambient particles emitted around players wearing full matching sets
+  particles:
+    enabled: true
+    count: 3
+
+# =========================================================================
+# 3. ARROW SETTINGS
 # =========================================================================
 arrow-settings:
   enabled: true
 
   # Friendly-fire collision pass-through toggles
-  skeleton-passthrough: true # Arrows shot by skeletons pass through fellow skeletons.
-  illager-passthrough: true # Arrows shot by pillagers & illusioners pass through other illagers.
+  skeleton-passthrough: true # Arrows shot by skeletons pass through fellow skeletons (including Strays & Bogged)
+  illager-passthrough: true # Arrows shot by pillagers & illusioners pass through all fellow raiders & witches
 
   # Speed multipliers applied to arrows shot by specific entity types.
   multipliers:
-    GLOBAL: 1.0 # Applies to all on top the multipliers below.
+    GLOBAL: 1.0 # Multiplier applied on top of entity-specific values below
     PLAYER: 1.0
     SKELETON: 1.5
     PILLAGER: 1.4
@@ -24,7 +85,7 @@ arrow-settings:
     ILLUSIONER: 1.5
 
 # =========================================================================
-# 2. BETTER BOATS (better-boats)
+# 4. BETTER BOATS
 # =========================================================================
 better-boats:
   enabled: true
@@ -41,6 +102,7 @@ better-boats:
     enabled: true
 
   # Smooth buoyancy controller allowing boats to travel upstream/rapids
+  # Uses 5-point star prediction with negative-coordinate floor calculation
   smooth:
     enabled: true
     sample-radius: 0.8
@@ -52,7 +114,7 @@ better-boats:
     minimum-change: 0.01
 
 # =========================================================================
-# 3. BETTER ELYTRAS (better-elytras)
+# 5. BETTER ELYTRAS
 # =========================================================================
 better-elytras:
   enabled: true
@@ -61,15 +123,13 @@ better-elytras:
   max-speed: 75.0
 
   # Visual action bar speedometer format
-  speedometer:
-    enabled: true
-    format: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
-    colors:
-      low: "green"
-      low-threshold: 40.0
-      moderate: "gold"
-      moderate-threshold: 60.0
-      high: "red"
+  speedometer-format: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
+  speedometer-colors:
+    low: "green"
+    low-threshold: 40.0
+    moderate: "gold"
+    moderate-threshold: 60.0
+    high: "red"
 
   # Mid-air boost using Wind Charges while gliding
   wind-charge-boost:
@@ -95,20 +155,38 @@ better-elytras:
     inherit-inertia: true # TNT inherits player's flight velocity
 
 # =========================================================================
-# 4. BETTER LADDERS (better-ladders)
+# 6. BETTER INVISIBILITY
+# =========================================================================
+better-invisibility:
+  enabled: true
+  # Hides armor pieces from other players when under invisibility
+  hide-armor: true
+  # Hides held items in main hand and off-hand when under invisibility
+  hide-held-items: false
+  # Strips potion swirl particles when drinking invisibility potions (100% transparent)
+  hide-potion-particles: true
+  # Drastically reduces mob detection range while invisible
+  reduce-mob-detection: true
+  # Maximum distance (blocks) mobs can notice an invisible player unless attacked
+  mob-detection-range: 2.5
+  # If true, mobs will retaliate if the invisible player attacks them first
+  allow-retaliation: true
+
+# =========================================================================
+# 7. BETTER LADDERS
 # =========================================================================
 better-ladders:
   enabled: true
   quick-climb: true # Right-click ladder with empty hand to warp to top/bottom
   chain-place: true # Sneak right-click with ladder to place down the column
-  prevent-breaking: true # Allows ladders to stay intact without a support block
+  prevent-breaking: true # Allows ladders to stay intact without a support block behind them
 
 # =========================================================================
-# 5. CHAINMAIL SIEVE (chainmail-sieve)
+# 8. CHAINMAIL SIEVE
 # =========================================================================
 chainmail-sieve:
   enabled: true
-  durability-cost: 1 # Helmet durability deducted per broken block
+  durability-cost: 1 # Helmet durability deducted per broken falling block
   drop-item: true
   particles: true
   sounds: true
@@ -118,9 +196,10 @@ chainmail-sieve:
     - "GRAVEL"
     - "SUSPICIOUS_SAND"
     - "SUSPICIOUS_GRAVEL"
+    - "SNOW"
 
 # =========================================================================
-# 6. COPPER ARMOR HAZARDS (copper-armor)
+# 9. COPPER ARMOR HAZARDS
 # =========================================================================
 copper-armor:
   enabled: true
@@ -132,35 +211,363 @@ copper-armor:
   ambient-sparks: true
 
 # =========================================================================
-# 7. CUSTOM ARMOR DURABILITY (custom-armor-durability)
+# 10. COPPER OXIDATION WATER BOTTLES
+# =========================================================================
+copper-oxidation:
+  enabled: true
+  # Splash water bottle AOE effect radius in blocks
+  splash-radius: 3.5
+  # Visual particles and sound effects when blocks advance in oxidation
+  effects: true
+
+# =========================================================================
+# 11. CUSTOM ARMOR DURABILITY
 # =========================================================================
 custom-armor-durability:
   enabled: true
-
   # Multiplier applied directly to raw durability damage.
   # - Set to 1.0 for vanilla durability loss.
   # - Set to 0.2 to only take 20% durability damage (armor lasts 5x longer).
   multiplier: 0.2
-
   # Flat integer added or subtracted after the multiplier.
   # - Negative values (e.g., -1) act as "Damage Negation" against weak hits.
   # - Positive values (e.g., 1) add extra wear-and-tear per hit.
   flat-modifier: 0
 
 # =========================================================================
-# 8. ENCHANTABLE PET ARMOR (enchantable-pet-armor)
+# 12. CUSTOM FOOD SYSTEM
+# =========================================================================
+custom-foods:
+  enabled: true
+  settings:
+    # Cooldown mode: DISABLE, GLOBAL, or PERSONAL
+    cooldown-type: "DISABLE"
+    global-cooldown: 0.0
+
+  # Configure any vanilla or non-vanilla material (e.g., STICK, DIAMOND, APPLE)
+  # Items are made natively edible using Consumable and Food data components
+  items:
+    APPLE:
+      FoodLevel: 4
+      Saturation: 2.4
+      CoolDown: 0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    BAKED_POTATO:
+      FoodLevel: 5
+      Saturation: 6.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    BEEF:
+      FoodLevel: 3
+      Saturation: 1.8
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    BEETROOT:
+      FoodLevel: 1
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    BEETROOT_SOUP:
+      FoodLevel: 6
+      Saturation: 7.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    BREAD:
+      FoodLevel: 5
+      Saturation: 6.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    CARROT:
+      FoodLevel: 3
+      Saturation: 3.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    CHICKEN:
+      FoodLevel: 2
+      Saturation: 2.1
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COD:
+      FoodLevel: 2
+      Saturation: 0.4
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_BEEF:
+      FoodLevel: 8
+      Saturation: 12.8
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_CHICKEN:
+      FoodLevel: 6
+      Saturation: 7.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_COD:
+      FoodLevel: 5
+      Saturation: 6.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_MUTTON:
+      FoodLevel: 6
+      Saturation: 9.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_PORKCHOP:
+      FoodLevel: 8
+      Saturation: 12.8
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_RABBIT:
+      FoodLevel: 5
+      Saturation: 6.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKED_SALMON:
+      FoodLevel: 6
+      Saturation: 9.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    COOKIE:
+      FoodLevel: 2
+      Saturation: 0.5
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    DRIED_KELP:
+      FoodLevel: 1
+      Saturation: 0.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    ENCHANTED_GOLDEN_APPLE:
+      FoodLevel: 4
+      Saturation: 9.6
+      InstantEat: false
+      PotionEffect:
+        - "ABSORPTION:4:120:1.0"
+        - "REGENERATION:2:20:1.0"
+        - "FIRE_RESISTANCE:1:300:1.0"
+        - "RESISTANCE:1:300:1.0"
+      Command: []
+    GLOW_BERRIES:
+      FoodLevel: 2
+      Saturation: 0.4
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    GOLDEN_APPLE:
+      FoodLevel: 4
+      Saturation: 9.6
+      InstantEat: false
+      PotionEffect:
+        - "ABSORPTION:1:120:1.0"
+        - "REGENERATION:2:5:1.0"
+      Command: []
+    GOLDEN_CARROT:
+      FoodLevel: 6
+      Saturation: 14.4
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    HONEY_BOTTLE:
+      FoodLevel: 6
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    MELON_SLICE:
+      FoodLevel: 2
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    MUSHROOM_STEW:
+      FoodLevel: 6
+      Saturation: 7.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    MUTTON:
+      FoodLevel: 2
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    POISONOUS_POTATO:
+      FoodLevel: 2
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect:
+        - "POISON:2:5:1.0"
+      Command: []
+    PORKCHOP:
+      FoodLevel: 3
+      Saturation: 0.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    POTATO:
+      FoodLevel: 1
+      Saturation: 0.6
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    PUFFERFISH:
+      FoodLevel: 1
+      Saturation: 0.2
+      InstantEat: false
+      PotionEffect:
+        - "HUNGER:3:15:1.0"
+        - "POISON:2:60:1.0"
+        - "NAUSEA:1:15:1.0"
+      Command: []
+    PUMPKIN_PIE:
+      FoodLevel: 8
+      Saturation: 4.8
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    RABBIT:
+      FoodLevel: 2
+      Saturation: 1.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    RABBIT_STEW:
+      FoodLevel: 10
+      Saturation: 12.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    ROTTEN_FLESH:
+      FoodLevel: 4
+      Saturation: 0.8
+      InstantEat: false
+      PotionEffect:
+        - "HUNGER:1:30:0.8"
+      Command: []
+    SALMON:
+      FoodLevel: 2
+      Saturation: 0.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    SPIDER_EYE:
+      FoodLevel: 2
+      Saturation: 3.2
+      InstantEat: false
+      PotionEffect:
+        - "POISON:1:4:1.0"
+      Command: []
+    SWEET_BERRIES:
+      FoodLevel: 1
+      Saturation: 0.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    TROPICAL_FISH:
+      FoodLevel: 1
+      Saturation: 0.2
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+
+# =========================================================================
+# 13. ENCHANTABLE PET ARMOR
 # =========================================================================
 enchantable-pet-armor:
   enabled: true
-  # Allows combining Protection, Fire, Blast, Projectile, Thorns, and Mending
+  # Allows combining Protection, Fire, Blast, Projectile, Thorns, Unbreaking, and Mending
   # onto Wolf Armor, Horse Armor, and Nautilus Armor in an anvil.
+  # (Indestructible horse armors are safeguarded against durability deletion).
   allow-cross-protection: true
 
 # =========================================================================
-# 9. FOOD & STORAGE EXTENSION (food-and-storage)
+# 14. ENTITY TWEAKS
+# =========================================================================
+entity-tweaks:
+  enabled: true
+
+  # Custom NMS pathfinding goals (Raiders, Witches, Zombies, Giants, Piglins)
+  custom-mob-ai: true
+
+  # Illusioners nerf: Replaces the 20s Blindness spell with 3s of Blindness into 10s of Darkness
+  illusioner-darkness: true
+
+  # Mobs drop XP when killed by Wither Roses, Magma blocks, Cramming, Lava, Fall damage,
+  # Pointed Dripstone / Stalagmites, Stonecutters, or Iron Golems
+  environmental-xp-drops: true
+
+  # Golem & Snowman active target coordinator system (Iron Golems prioritize high threats then standard threats)
+  golem-attack-system: true
+
+  # Witches throw Splash Strong Healing at Zombies (dealing lethal inverse damage to undead)
+  witch-heal-against-undead: true
+
+  # Prevents friendly-fire damage, targeting, and projectile hits between fellow Illagers, Witches, and Skeletons
+  prevent-illager-friendly-fire: true
+
+  # Armor stands naturally spawn with arms
+  armor-stands-have-arms: true
+
+  # Iron Golems completely ignore and do not damage Zombie Villagers (allowing players to cure them)
+  iron-golem-ignore-zombie-villagers: true
+
+  # Zombies, Skeletons, Strays, Bogged, and Phantoms do not combust in daylight (and skeletons won't flee to shade)
+  no-daylight-burning: true
+
+  # Hoglins and Piglins do not zombify when in the Overworld
+  no-overworld-zombification: true
+
+  # Entities and players cannot trample Farmland crops into dirt
+  prevent-crop-trample: true
+
+  # Protects Turtle Eggs from being trampled or broken (mobs still pathfind to them, but walking on them won't crack them)
+  protect-turtle-eggs: true
+
+# =========================================================================
+# 15. FAST LEAF DECAY
+# =========================================================================
+fast-leaf-decay:
+  enabled: true
+  # Delay (in ticks) after breaking a log before leaf decay starts (20 ticks = 1 second)
+  break-delay-ticks: 4
+  # Delay (in ticks) between cascading leaf decay ripples
+  decay-delay-ticks: 2
+  # Maximum leaves processed per tick (prevents lag spikes on massive 2x2 spruce/jungle trees)
+  max-decay-per-tick: 20
+  # Ambient leaf breaking particles
+  spawn-particles: true
+  # Leaf breaking sound effect
+  play-sound: true
+  # When true, leaves drop their natural loot (saplings, apples, sticks)
+  drop-items: true
+  # Enabled worlds. Use ["ALL"] for all worlds.
+  worlds:
+    - "ALL"
+
+# =========================================================================
+# 16. FOOD & STORAGE EXTENSION
 # =========================================================================
 food-and-storage:
-  # Allows eating even when the hunger bar is full (hooks with ConsumeFood2)
+  # Allows eating even when the hunger bar is full (Paper FoodComponent integration)
   always-eat:
     enabled: true
 
@@ -169,7 +576,7 @@ food-and-storage:
     enabled: true
     stacks: 2 # 2 stacks = 128 items capacity
 
-  # Custom maximum stack sizes
+  # Custom maximum stack sizes (enforced natively via 1.21 item components)
   custom-stacks:
     enabled: true
     potions: 8
@@ -178,14 +585,14 @@ food-and-storage:
     totems: 4
 
 # =========================================================================
-# 10. INVENTORY TOTEM OF UNDYING (inventory-totem)
+# 17. INVENTORY TOTEM OF UNDYING
 # =========================================================================
 # Activates Totems of Undying from ANY inventory slot (excluding shulkers & bundles)
 inventory-totem:
   enabled: true
 
 # =========================================================================
-# 11. LEAD ANY MOB (lead-any-mob)
+# 18. LEAD ANY MOB
 # =========================================================================
 lead-any-mob:
   enabled: true
@@ -194,7 +601,7 @@ lead-any-mob:
     - "ALL"
 
 # =========================================================================
-# 12. MAGICAL CAMPFIRE (magical-campfire)
+# 19. MAGICAL CAMPFIRE
 # =========================================================================
 magical-campfire:
   enabled: true
@@ -205,7 +612,7 @@ magical-campfire:
     range: 3
     actionbar:
       enabled: true
-      message: "<green>You feel the warmth healing you."
+      message: "<green>You feel the warmth healing you.</green>"
   soul-campfire:
     enabled: true
     require-lit: true
@@ -213,10 +620,36 @@ magical-campfire:
     range: 3
     actionbar:
       enabled: true
-      message: "<cyan>The soul flame restores your energy."
+      message: "<cyan>The soul flame restores your energy.</cyan>"
 
 # =========================================================================
-# 13. SHIELD COMBAT SYSTEM (shield-settings)
+# 20. PET TELEPORTATION
+# =========================================================================
+pet-teleportation:
+  enabled: true
+
+  # Teleport following pets to the player when the player teleports
+  teleport-on-player-teleport: true
+
+  # Teleport following pets when the chunk they are in is about to unload
+  teleport-on-chunk-unload: true
+
+  # Teleport following pets if they get stranded too far behind the player
+  distance-teleport:
+    enabled: true
+    # Maximum distance before following pets catch up (blocks)
+    max-distance: 24.0
+    # Scan interval in ticks (60 ticks = 3 seconds)
+    check-interval: 60
+
+  # Allow following pets to teleport across dimensions / worlds to follow their owner
+  cross-world: true
+
+  # Optional: Keep the origin chunk loaded for X seconds after a player teleports (0 = disabled)
+  keep-chunk-loaded-seconds: 0
+
+# =========================================================================
+# 21. SHIELD COMBAT SYSTEM
 # =========================================================================
 shield-settings:
   enabled: true
@@ -225,7 +658,33 @@ shield-settings:
   axe-disable-ticks: 100 # Cooldown applied when disabled by an axe (100 ticks = 5 seconds)
 
 # =========================================================================
-# 14. SPEAR COMBAT (spear-settings)
+# 22. SHULKER DYEING
+# =========================================================================
+shulker-colors:
+  enabled: true
+  # Allows dispensers to dye shulkers directly facing them
+  dispenser-dyeing: true
+  # Allows washing dyed shulkers back to their default color using a Water Bottle
+  allow-wash: true
+  # Play dye sound when dyed
+  play-sound: true
+  # Emit dye particles when applied
+  spawn-particles: true
+
+# =========================================================================
+# 23. SNOW PHYSICS & SNOWBALL LAYERS
+# =========================================================================
+snow-physics:
+  enabled: true
+  # Unsupported snow layers fall like sand/gravel and stack on impact
+  falling-snow-layers: true
+  # Thrown snowballs create or build up snow layers when hitting blocks
+  snowball-layers: true
+  # When a snow layer reaches 8 layers from snowballs, convert into a full Snow Block
+  convert-to-snow-block: true
+
+# =========================================================================
+# 24. SPEAR COMBAT
 # =========================================================================
 spear-settings:
   enabled: true
@@ -233,7 +692,7 @@ spear-settings:
   lunge-fast-cooldown: true
 
 # =========================================================================
-# 15. TRIDENT COMBAT & ENCHANTMENTS (trident-settings)
+# 25. TRIDENT COMBAT & ENCHANTMENTS
 # =========================================================================
 trident-settings:
   enabled: true
@@ -243,8 +702,22 @@ trident-settings:
   channeling-all-items: true # Melee hits with any Channeling item summon lightning
   protect-mob-drops: true # Lightning from Channeling will not destroy drops from the killed mob
 
+  # Comprehensive inventory & retrieval management
+  handling:
+    # Return trident to main hand if thrown from main hand and hand is empty
+    return-to-main-hand: true
+    # Return trident to off-hand if thrown from off-hand and off-hand is empty
+    return-to-off-hand: true
+    # Triggers Loyalty return if a trident falls into the void below the world
+    void-loyalty-return: true
+    # Portal behavior: CANCEL (prevents disappearing) or ALLOW
+    portal-behavior:
+      nether-portal: CANCEL
+      end-portal: CANCEL
+      end-gateway: CANCEL
+
 # =========================================================================
-# 16. TURTLE SCUTE BRUSHING (turtle-brushing)
+# 26. TURTLE SCUTE BRUSHING
 # =========================================================================
 turtle-brushing:
   enabled: true
@@ -252,9 +725,51 @@ turtle-brushing:
   brush-durability-cost: 16
 
 # =========================================================================
-# 17. WIND CHARGE & WIND BURST (wind-charge)
+# 27. VILLAGER INSTANT RESTOCK
+# =========================================================================
+villager-restock:
+  enabled: true
+
+  # Restock trades immediately while trading (trades never lock up mid-session)
+  mid-trade-restock: true
+
+  # Restock trades when opening the trade GUI
+  open-gui-restock: true
+
+  # Also apply instant restocking to Wandering Traders
+  include-wandering-traders: true
+
+  # If true, resets trade demand to 0 so prices never inflate from frequent trading
+  clear-price-inflation: false
+
+# =========================================================================
+# 28. VOID TELEPORT
+# =========================================================================
+void-teleport:
+  enabled: true
+  # The Y-level in The End that triggers the void rescue (The End void starts at Y <= 0.0)
+  void-threshold-y: 0.0
+  # The height in the Overworld where the player appears (X and Z coordinates are preserved)
+  fall-height: 512.0
+  # Target world. Use "DEFAULT_OVERWORLD" to dynamically locate the primary overworld
+  target-world: "DEFAULT_OVERWORLD"
+  # Grants one-time fall damage immunity when hitting the ground in the Overworld
+  immune-until-landing: true
+  # Also rescues and teleports the player's mount or vehicle (horses, camels, boats, etc.)
+  teleport-vehicle: true
+  # Resets accumulated void fall distance upon teleporting
+  reset-fall-distance: true
+  # Optional Slow Falling effect duration (seconds) to give players time to deploy an Elytra (0 to disable)
+  slow-falling-seconds: 5
+  # Sound played when entering the Overworld
+  sound: "item.chorus_fruit.teleport"
+  # MiniMessage notification sent to the player (supports gradients, hex colors, and tags)
+  message: "<gradient:#4facfe:#00f2fe>You plunge through the cosmic void, falling into the Overworld skies!</gradient>"
+
+# =========================================================================
+# 29. WIND CHARGE & WIND BURST
 # =========================================================================
 wind-charge:
   enabled: true
-  # Bypasses Blast Protection IV, Netherite, and Armor Trim dampening
+  # Bypasses Blast Protection IV, Netherite, and Armor Trim dampening on knockback
   ignore-armor-dampening: true

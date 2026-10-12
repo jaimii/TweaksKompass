@@ -4,11 +4,12 @@ import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.Sound
 import org.bukkit.entity.*
+import org.bukkit.potion.PotionEffect
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
 import project.kompass.tweakskompass.TweaksKompass
 import java.util.UUID
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.sqrt
 
 class ArrowTrackingManager(private val plugin: TweaksKompass) {
@@ -20,9 +21,8 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
         val spawnTime: Long = System.currentTimeMillis()
     )
 
-    private val trackedArrows = CopyOnWriteArrayList<TrackedArrow>()
+    private val trackedArrows = ConcurrentLinkedQueue<TrackedArrow>()
     private var tickTask: BukkitTask? = null
-
     private val tempLoc = Location(null, 0.0, 0.0, 0.0)
 
     fun start() {
@@ -38,8 +38,9 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                 val shooter = tracked.shooter
 
                 if (!arrow.isValid || currentTime - tracked.spawnTime > 5000) {
-                    trackedArrows.remove(tracked)
+                    iterator.remove()
                     plugin.customArrowVelocities.remove(arrow.uniqueId)
+                    plugin.customArrowVelocitiesByEntityId.remove(arrow.entityId)
                     continue
                 }
 
@@ -64,7 +65,6 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                     val distance = sqrt(distanceSq)
                     val direction = Vector(dx / distance, dy / distance, dz / distance)
 
-                    // Raytrace collision check respecting config toggles
                     val result = arrow.world.rayTraceEntities(
                         tracked.lastLoc,
                         direction,
@@ -72,7 +72,6 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                         0.3
                     ) { entity ->
                         entity is LivingEntity &&
-                                entity !is Player &&
                                 entity !is ArmorStand &&
                                 !entity.isDead &&
                                 entity.uniqueId != shooter.uniqueId &&
@@ -81,12 +80,36 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
 
                     if (result != null && result.hitEntity is LivingEntity) {
                         val target = result.hitEntity as LivingEntity
-                        trackedArrows.remove(tracked)
+                        iterator.remove()
                         plugin.customArrowVelocities.remove(arrow.uniqueId)
+                        plugin.customArrowVelocitiesByEntityId.remove(arrow.entityId)
 
                         var damage = arrow.damage * distance
                         if (arrow.isCritical) {
                             damage += Math.random() * (damage / 2.0) + 1.0
+                        }
+
+                        // Propagate Flame Bow effect
+                        if (arrow.fireTicks > 0) {
+                            target.fireTicks = maxOf(target.fireTicks, 100)
+                        }
+
+                        // Propagate Tipped Arrow effects
+                        if (arrow is Arrow) {
+                            for (customEffect in arrow.customEffects) {
+                                target.addPotionEffect(customEffect)
+                            }
+                            val baseType = arrow.basePotionType
+                            if (baseType != null) {
+                                for (eff in baseType.potionEffects) {
+                                    target.addPotionEffect(eff)
+                                }
+                            }
+                        }
+
+                        // Propagate Spectral Arrow glowing
+                        if (arrow is SpectralArrow) {
+                            target.addPotionEffect(PotionEffect(org.bukkit.potion.PotionEffectType.GLOWING, 200, 0))
                         }
 
                         target.damage(damage, arrow)
@@ -99,8 +122,9 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                 }
 
                 if (arrow.isInBlock || arrow.isOnGround) {
-                    trackedArrows.remove(tracked)
+                    iterator.remove()
                     plugin.customArrowVelocities.remove(arrow.uniqueId)
+                    plugin.customArrowVelocitiesByEntityId.remove(arrow.entityId)
                     continue
                 }
 
@@ -121,7 +145,9 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
         trackedArrows.add(TrackedArrow(arrow, shooter, arrow.location.clone()))
     }
 
-    fun untrack(arrowId: UUID) {
+    fun untrack(arrowId: UUID, entityId: Int) {
         trackedArrows.removeIf { it.arrow.uniqueId == arrowId }
+        plugin.customArrowVelocities.remove(arrowId)
+        plugin.customArrowVelocitiesByEntityId.remove(entityId)
     }
 }

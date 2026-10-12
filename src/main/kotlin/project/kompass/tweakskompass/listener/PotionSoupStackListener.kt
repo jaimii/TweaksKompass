@@ -1,6 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -10,11 +9,11 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.entity.ItemSpawnEvent
 import org.bukkit.event.inventory.*
-import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
-import org.bukkit.plugin.java.JavaPlugin
+import project.kompass.tweakskompass.TweaksKompass
 import java.util.EnumSet
 
 class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
@@ -39,10 +38,10 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
     }
 
     private fun updateStackSize(item: ItemStack?) {
-        if (item == null || item.type == Material.AIR) return
+        if (item == null || item.type.isAir) return
         if (!plugin.config.getBoolean("food-and-storage.custom-stacks.enabled", true)) return
-        val type = item.type
 
+        val type = item.type
         val potionLimit = plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
         val soupLimit = plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
         val cakeLimit = plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
@@ -99,6 +98,8 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryClick(event: InventoryClickEvent) {
         if (event is InventoryCreativeEvent) return
+        // Critical: Drop click guard prevents ArrayIndexOutOfBoundsException (-999)
+        if (event.slot < 0) return
 
         val cursor = event.cursor
         val currentItem = event.currentItem
@@ -108,14 +109,20 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
         updateStackSize(currentItem)
         updateStackSize(cursor)
 
-        Bukkit.getScheduler().runTask(JavaPlugin.getPlugin(TweaksKompass::class.java), Runnable {
-            event.clickedInventory?.let {
-                val slotItem = it.getItem(event.slot)
-                if (isStackTarget(slotItem)) {
-                    updateStackSize(slotItem)
-                    it.setItem(event.slot, slotItem)
+        val slot = event.slot
+        val clickedInv = event.clickedInventory
+
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            clickedInv?.let {
+                if (slot in 0 until it.size) {
+                    val slotItem = it.getItem(slot)
+                    if (isStackTarget(slotItem)) {
+                        updateStackSize(slotItem)
+                        it.setItem(slot, slotItem)
+                    }
                 }
             }
+
             val player = event.whoClicked as? Player
             if (player != null && player.isOnline) {
                 val cursorItem = player.itemOnCursor
@@ -129,6 +136,8 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryCreative(event: InventoryCreativeEvent) {
+        if (event.slot < 0) return
+
         val cursor = event.cursor
         val currentItem = event.currentItem
 
@@ -168,7 +177,10 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
             updateStackSize(cursor)
         }
 
-        Bukkit.getScheduler().runTask(JavaPlugin.getPlugin(TweaksKompass::class.java), Runnable {
+        val slot = event.slot
+        val clickedInv = event.clickedInventory
+
+        Bukkit.getScheduler().runTask(plugin, Runnable {
             val player = event.whoClicked as? Player ?: return@Runnable
             if (player.isOnline) {
                 val cursorItem = player.itemOnCursor
@@ -177,11 +189,13 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
                     player.setItemOnCursor(cursorItem)
                 }
 
-                event.clickedInventory?.let {
-                    val slotItem = it.getItem(event.slot)
-                    if (isStackTarget(slotItem)) {
-                        updateStackSize(slotItem)
-                        it.setItem(event.slot, slotItem)
+                clickedInv?.let {
+                    if (slot in 0 until it.size) {
+                        val slotItem = it.getItem(slot)
+                        if (isStackTarget(slotItem)) {
+                            updateStackSize(slotItem)
+                            it.setItem(slot, slotItem)
+                        }
                     }
                 }
             }
@@ -210,12 +224,14 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
         updateStackSize(oldCursor)
         updateStackSize(cursor)
 
-        Bukkit.getScheduler().runTask(JavaPlugin.getPlugin(TweaksKompass::class.java), Runnable {
+        Bukkit.getScheduler().runTask(plugin, Runnable {
             for (slot in event.newItems.keys) {
-                val slotItem = event.view.getItem(slot)
-                if (isStackTarget(slotItem)) {
-                    updateStackSize(slotItem)
-                    event.view.setItem(slot, slotItem)
+                if (slot in 0 until event.view.topInventory.size + event.view.bottomInventory.size) {
+                    val slotItem = event.view.getItem(slot)
+                    if (isStackTarget(slotItem)) {
+                        updateStackSize(slotItem)
+                        event.view.setItem(slot, slotItem)
+                    }
                 }
             }
             val player = event.whoClicked as? Player

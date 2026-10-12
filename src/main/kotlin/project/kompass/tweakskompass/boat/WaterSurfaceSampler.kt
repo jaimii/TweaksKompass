@@ -3,7 +3,9 @@ package project.kompass.tweakskompass.boat
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.block.data.Levelled
+import org.bukkit.block.data.Waterlogged
 import org.bukkit.util.Vector
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -26,7 +28,6 @@ class WaterSurfaceSampler {
         }
     }
 
-    // Allocation-free 5-point water level sampling
     fun sample(center: Location, radius: Double, motion: Vector): WaterSample? {
         val forward = horizontalDirection(center, motion)
         val fX = forward.x
@@ -34,7 +35,6 @@ class WaterSurfaceSampler {
         val rX = -fZ
         val rZ = fX
 
-        // 5 sampling points: Center, Front-Right, Front-Left, Back-Right, Back-Left
         val offsetsX = doubleArrayOf(
             0.0,
             fX * radius + rX * radius,
@@ -63,8 +63,8 @@ class WaterSurfaceSampler {
         val baseZ = center.z
 
         for (i in 0 until 5) {
-            val sampleX = (baseX + offsetsX[i]).toInt()
-            val sampleZ = (baseZ + offsetsZ[i]).toInt()
+            val sampleX = floor(baseX + offsetsX[i]).toInt()
+            val sampleZ = floor(baseZ + offsetsZ[i]).toInt()
             val height = surfaceAt(world, sampleX, baseY, sampleZ)
 
             if (height != null) {
@@ -109,7 +109,15 @@ class WaterSurfaceSampler {
     private fun surfaceAt(world: org.bukkit.World, blockX: Int, startY: Int, blockZ: Int): Double? {
         for (y in startY + 1 downTo startY - 2) {
             val block = world.getBlockAt(blockX, y, blockZ)
-            if (block.type != Material.WATER) continue
+            val type = block.type
+
+            val isWaterSource = type == Material.WATER || type == Material.BUBBLE_COLUMN ||
+                    type == Material.SEAGRASS || type == Material.TALL_SEAGRASS ||
+                    type == Material.KELP || type == Material.KELP_PLANT
+
+            val isWaterloggedBlock = block.blockData is Waterlogged && (block.blockData as Waterlogged).isWaterlogged
+
+            if (!isWaterSource && !isWaterloggedBlock) continue
 
             val data = block.blockData
             val level = if (data is Levelled) data.level else 0

@@ -1,74 +1,45 @@
 package project.kompass.tweakskompass.arrow
 
-import com.comphenix.protocol.PacketType
-import com.comphenix.protocol.ProtocolLibrary
-import com.comphenix.protocol.events.ListenerPriority
-import com.comphenix.protocol.events.PacketAdapter
-import com.comphenix.protocol.events.PacketContainer
-import com.comphenix.protocol.events.PacketEvent
-import org.bukkit.Bukkit
-import org.bukkit.entity.AbstractArrow
+import com.github.retrooper.packetevents.PacketEvents
+import com.github.retrooper.packetevents.event.PacketListenerAbstract
+import com.github.retrooper.packetevents.event.PacketListenerPriority
+import com.github.retrooper.packetevents.event.PacketSendEvent
+import com.github.retrooper.packetevents.protocol.packettype.PacketType
+import com.github.retrooper.packetevents.util.Vector3d
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityVelocity
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import org.bukkit.util.Vector
 import project.kompass.tweakskompass.TweaksKompass
 
-object ArrowPacketListener {
+object ArrowPacketListener : PacketListenerAbstract(PacketListenerPriority.HIGHEST) {
 
-    private var isRegistered = false
+    private lateinit var plugin: TweaksKompass
 
     fun register(plugin: TweaksKompass) {
-        if (!Bukkit.getPluginManager().isPluginEnabled("ProtocolLib")) {
-            plugin.logger.info("[ArrowModule] ProtocolLib not detected. Running on native Paper velocity physics.")
-            return
-        }
+        this.plugin = plugin
+        PacketEvents.getAPI().eventManager.registerListener(this)
+    }
 
-        try {
-            val protocolManager = ProtocolLibrary.getProtocolManager()
-            protocolManager.addPacketListener(object : PacketAdapter(
-                plugin,
-                ListenerPriority.HIGHEST,
-                PacketType.Play.Server.ENTITY_VELOCITY
-            ) {
-                override fun onPacketSending(event: PacketEvent) {
-                    val packet = event.packet
-                    val entity = packet.getEntityModifier(event.player.world).readSafely(0)
+    override fun onPacketSend(event: PacketSendEvent) {
+        if (event.packetType != PacketType.Play.Server.ENTITY_VELOCITY) return
 
-                    if (entity is AbstractArrow) {
-                        val correctVelocity = plugin.customArrowVelocities[entity.uniqueId] ?: return
+        val packet = WrapperPlayServerEntityVelocity(event)
 
-                        if (packet.vectors.size() > 0) {
-                            packet.vectors.write(0, correctVelocity)
-                        } else if (packet.integers.size() >= 4) {
-                            packet.integers.write(1, (correctVelocity.x * 8000.0).toInt())
-                            packet.integers.write(2, (correctVelocity.y * 8000.0).toInt())
-                            packet.integers.write(3, (correctVelocity.z * 8000.0).toInt())
-                        }
-                    }
-                }
-            })
-            isRegistered = true
-            plugin.logger.info("[ArrowModule] ProtocolLib packet adapter registered successfully.")
-        } catch (t: Throwable) {
-            plugin.logger.warning("[ArrowModule] Failed to register ProtocolLib packet listener: ${t.message}")
-        }
+        // ULTRA-FAST O(1) LOOKUP:
+        // Non-arrow velocity packets (players, mobs, minecarts) instantly return in 1 nanosecond.
+        // Bypasses player.world.entities completely!
+        val customVel = plugin.customArrowVelocitiesByEntityId[packet.entityId] ?: return
+
+        packet.velocity = Vector3d(customVel.x, customVel.y, customVel.z)
+        event.markForReEncode(true)
     }
 
     fun sendSyncPacket(player: Player, entity: Entity, velocity: Vector) {
-        if (!isRegistered) return
-        try {
-            val protocolManager = ProtocolLibrary.getProtocolManager()
-            val packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_VELOCITY)
-            packet.integers.write(0, entity.entityId)
-
-            if (packet.vectors.size() > 0) {
-                packet.vectors.write(0, velocity)
-            } else if (packet.integers.size() >= 4) {
-                packet.integers.write(1, (velocity.x * 8000.0).toInt())
-                packet.integers.write(2, (velocity.y * 8000.0).toInt())
-                packet.integers.write(3, (velocity.z * 8000.0).toInt())
-            }
-            protocolManager.sendServerPacket(player, packet)
-        } catch (ignored: Throwable) {}
+        val packet = WrapperPlayServerEntityVelocity(
+            entity.entityId,
+            Vector3d(velocity.x, velocity.y, velocity.z)
+        )
+        PacketEvents.getAPI().playerManager.sendPacket(player, packet)
     }
 }

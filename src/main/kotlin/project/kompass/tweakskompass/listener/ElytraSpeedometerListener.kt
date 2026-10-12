@@ -1,13 +1,14 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
+import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import project.kompass.tweakskompass.TweaksKompass
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.sqrt
@@ -16,8 +17,7 @@ class ElytraSpeedometerListener(private val plugin: TweaksKompass) : Listener {
 
     private val miniMessage = MiniMessage.miniMessage()
     private val activeSpeedometerPlayers = ConcurrentHashMap.newKeySet<UUID>()
-    // Throttling map: tracks the last tick an actionbar was dispatched per player
-    private val lastActionBarTicks = ConcurrentHashMap<UUID, Long>()
+    private val lastActionBarTicks = ConcurrentHashMap<UUID, Int>()
 
     private var formatString: String = ""
     private var lowColor: String = ""
@@ -31,21 +31,21 @@ class ElytraSpeedometerListener(private val plugin: TweaksKompass) : Listener {
     }
 
     fun updateValues() {
-        formatString = plugin.config.getString(
+        val cfg = plugin.config
+        formatString = cfg.getString(
             "better-elytras.speedometer-format",
             "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
         ) ?: "<green>◀</green> <{color}>Speed: {speed} m/s</{color}> <green>▶</green>"
 
-        lowColor = plugin.config.getString("better-elytras.speedometer-colors.low", "green") ?: "green"
-        lowThreshold = plugin.config.getDouble("better-elytras.speedometer-colors.low-threshold", 40.0)
-        moderateColor = plugin.config.getString("better-elytras.speedometer-colors.moderate", "gold") ?: "gold"
-        moderateThreshold = plugin.config.getDouble("better-elytras.speedometer-colors.moderate-threshold", 60.0)
-        highColor = plugin.config.getString("better-elytras.speedometer-colors.high", "red") ?: "red"
+        lowColor = cfg.getString("better-elytras.speedometer-colors.low", "green") ?: "green"
+        lowThreshold = cfg.getDouble("better-elytras.speedometer-colors.low-threshold", 40.0)
+        moderateColor = cfg.getString("better-elytras.speedometer-colors.moderate", "gold") ?: "gold"
+        moderateThreshold = cfg.getDouble("better-elytras.speedometer-colors.moderate-threshold", 60.0)
+        highColor = cfg.getString("better-elytras.speedometer-colors.high", "red") ?: "red"
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
-        // Fast-exit: Ignore pitch/yaw head rotations
         if (!event.hasChangedPosition()) return
 
         val player = event.player
@@ -61,10 +61,10 @@ class ElytraSpeedometerListener(private val plugin: TweaksKompass) : Listener {
 
         activeSpeedometerPlayers.add(uuid)
 
-        // TPS OPTIMIZATION: Throttle action bar updates to once every 3 ticks (~6.6 Hz)
-        val currentTick = player.world.fullTime
-        val lastTick = lastActionBarTicks[uuid] ?: 0L
-        if (currentTick - lastTick < 3L) return
+        // Monotonic server tick throttle (immune to /time set)
+        val currentTick = Bukkit.getCurrentTick()
+        val lastTick = lastActionBarTicks[uuid] ?: 0
+        if (currentTick - lastTick < 3) return
         lastActionBarTicks[uuid] = currentTick
 
         val velocity = player.velocity

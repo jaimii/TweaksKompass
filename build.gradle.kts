@@ -17,19 +17,21 @@ repositories {
         name = "sonatype"
         url = uri("https://oss.sonatype.org/content/groups/public/")
     }
-
     maven {
-        name = "dmulloy2-repo"
-        url = uri("https://repo.dmulloy2.net/repository/public/")
+        name = "codemc-releases"
+        url = uri("https://repo.codemc.io/repository/maven-releases/")
     }
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
 dependencies {
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
-
-    compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0")
+    implementation("com.github.retrooper:packetevents-spigot:2.7.0")
 }
 
 tasks {
@@ -43,6 +45,8 @@ tasks {
     }
 
     shadowJar {
-        relocate("kotlin", "project.kompass.btk.libs.kotlin")
+        relocate("kotlin", "project.kompass.tweakskompass.libs.kotlin")
+        relocate("com.github.retrooper.packetevents", "project.kompass.tweakskompass.libs.packetevents")
+        relocate("io.github.retrooper.packetevents", "project.kompass.tweakskompass.libs.packetevents")
     }
 }

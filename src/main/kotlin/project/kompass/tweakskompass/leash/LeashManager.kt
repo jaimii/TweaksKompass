@@ -1,11 +1,12 @@
 package project.kompass.tweakskompass.leash
 
-import project.kompass.tweakskompass.TweaksKompass
 import org.bukkit.Chunk
+import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.player.PlayerTeleportEvent
+import project.kompass.tweakskompass.TweaksKompass
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,35 +15,34 @@ class LeashManager(private val plugin: TweaksKompass) {
     private val activeLeashes: MutableMap<UUID, MutableSet<UUID>> = ConcurrentHashMap()
 
     fun trackLeash(playerUuid: UUID, entityUuid: UUID) {
-        val leashes = activeLeashes.computeIfAbsent(playerUuid) { ConcurrentHashMap.newKeySet() }
-        leashes.add(entityUuid)
+        activeLeashes.computeIfAbsent(playerUuid) { ConcurrentHashMap.newKeySet() }.add(entityUuid)
     }
 
     fun untrackLeash(playerUuid: UUID, entityUuid: UUID) {
-        val leashes = activeLeashes[playerUuid]
-        if (leashes != null) {
-            leashes.remove(entityUuid)
-            if (leashes.isEmpty()) {
-                activeLeashes.remove(playerUuid)
-            }
+        activeLeashes[playerUuid]?.let {
+            it.remove(entityUuid)
+            if (it.isEmpty()) activeLeashes.remove(playerUuid)
         }
     }
 
-    fun hasActiveLeashes(playerUuid: UUID): Boolean {
-        return activeLeashes.containsKey(playerUuid)
-    }
+    fun hasActiveLeashes(playerUuid: UUID): Boolean = activeLeashes.containsKey(playerUuid)
 
     fun registerProgrammaticUnleash(entityId: UUID) {
         programmaticUnleashes.add(entityId)
         plugin.server.scheduler.runTask(plugin, Runnable { programmaticUnleashes.remove(entityId) })
     }
 
-    fun isProgrammaticUnleash(entityId: UUID): Boolean {
-        return programmaticUnleashes.contains(entityId)
-    }
+    fun isProgrammaticUnleash(entityId: UUID): Boolean = programmaticUnleashes.contains(entityId)
 
-    fun teleportLeashed(holder: LivingEntity) {
-        getLeashedEntities(holder).forEach { leashed -> teleportLeashed(holder, leashed) }
+    fun teleportLeashed(holder: LivingEntity, fromLocation: Location) {
+        val fromWorld = fromLocation.world ?: return
+        val nearbyLeashed = fromWorld.getNearbyEntities(fromLocation, 16.0, 16.0, 16.0)
+            .filterIsInstance<LivingEntity>()
+            .filter { it.isLeashed && it.leashHolder?.uniqueId == holder.uniqueId }
+
+        for (leashed in nearbyLeashed) {
+            teleportLeashed(holder, leashed)
+        }
     }
 
     fun teleportLeashed(holder: LivingEntity, leashed: LivingEntity) {
@@ -51,6 +51,8 @@ class LeashManager(private val plugin: TweaksKompass) {
 
         val chunk: Chunk = leashed.location.chunk
         chunk.addPluginChunkTicket(plugin)
+
+        registerProgrammaticUnleash(leashed.uniqueId)
         leashed.setLeashHolder(null)
 
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
@@ -87,25 +89,9 @@ class LeashManager(private val plugin: TweaksKompass) {
     }
 
     fun isWorldValid(world: World): Boolean {
+        if (!plugin.config.getBoolean("lead-any-mob.enabled", true)) return false
         val worlds = plugin.config.getStringList("lead-any-mob.worlds")
         if (worlds.isEmpty()) return true
         return worlds.contains("ALL") || worlds.contains(world.name)
-    }
-
-    private fun getLeashedEntities(holder: Entity): List<LivingEntity> {
-        var leashedEntities: MutableList<LivingEntity>? = null
-
-        for (nearby in holder.getNearbyEntities(15.0, 15.0, 15.0)) {
-            if (nearby is LivingEntity && nearby.isLeashed) {
-                val leashHolder = nearby.leashHolder
-                if (leashHolder != null && leashHolder.uniqueId == holder.uniqueId) {
-                    if (leashedEntities == null) {
-                        leashedEntities = ArrayList(2)
-                    }
-                    leashedEntities.add(nearby)
-                }
-            }
-        }
-        return leashedEntities ?: emptyList()
     }
 }

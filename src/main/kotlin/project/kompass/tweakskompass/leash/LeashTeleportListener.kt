@@ -1,18 +1,16 @@
 package project.kompass.tweakskompass.leash
 
-import project.kompass.tweakskompass.TweaksKompass
-import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerTeleportEvent
+import project.kompass.tweakskompass.TweaksKompass
 
 class LeashTeleportListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerTeleport(event: PlayerTeleportEvent) {
         val player = event.player
-
         if (!plugin.leashManager.hasActiveLeashes(player.uniqueId)) return
 
         val fromWorld = event.from.world ?: return
@@ -21,6 +19,6 @@ class LeashTeleportListener(private val plugin: TweaksKompass) : Listener {
 
         if (!plugin.leashManager.isWorldValid(fromWorld) || !plugin.leashManager.isWorldValid(toWorld)) return
 
-        plugin.leashManager.teleportLeashed(player)
+        plugin.leashManager.teleportLeashed(player, event.from)
     }
 }

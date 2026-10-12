@@ -16,10 +16,11 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 import org.bukkit.inventory.meta.EnchantmentStorageMeta
+import project.kompass.tweakskompass.TweaksKompass
 import java.util.EnumSet
 import java.util.Random
 
-class EnchantablePetArmorListener : Listener {
+class EnchantablePetArmorListener(private val plugin: TweaksKompass) : Listener {
 
     private val random = Random()
 
@@ -34,14 +35,22 @@ class EnchantablePetArmorListener : Listener {
             EntityType.TRADER_LLAMA,
             EntityType.WOLF
         )
+
+        private val ALLOWED_PET_ENCHANTS: Set<Enchantment> = setOf(
+            Enchantment.PROTECTION,
+            Enchantment.FIRE_PROTECTION,
+            Enchantment.BLAST_PROTECTION,
+            Enchantment.PROJECTILE_PROTECTION,
+            Enchantment.THORNS,
+            Enchantment.UNBREAKING,
+            Enchantment.MENDING
+        )
     }
 
     private fun isPetArmor(item: ItemStack?): Boolean {
         if (item == null || item.type == Material.AIR) return false
         val name = item.type.name
-        return name == "WOLF_ARMOR" ||
-                name.contains("HORSE_ARMOR") ||
-                name.contains("NAUTILUS")
+        return name == "WOLF_ARMOR" || name.contains("HORSE_ARMOR") || name.contains("NAUTILUS")
     }
 
     private fun getEnchantLevel(item: ItemStack, enchant: Enchantment): Int {
@@ -65,10 +74,11 @@ class EnchantablePetArmorListener : Listener {
 
     @EventHandler
     fun onAnvilUse(event: PrepareAnvilEvent) {
+        if (!plugin.config.getBoolean("enchantable-pet-armor.enabled", true)) return
+
         val first = event.inventory.getItem(0)
         val second = event.inventory.getItem(1)
         if (first == null || second == null) return
-
         if (!isPetArmor(first)) return
 
         val result = first.clone()
@@ -81,10 +91,10 @@ class EnchantablePetArmorListener : Listener {
         var added = 0
 
         for ((enchant, incomingLvl) in incoming) {
+            if (!ALLOWED_PET_ENCHANTS.contains(enchant)) continue
+
             val cur = getEnchantLevel(result, enchant)
             var next = if (cur == incomingLvl) cur + 1 else Math.max(cur, incomingLvl)
-
-            // Capped at vanilla max level limit
             val maxLevel = enchant.maxLevel
             next = Math.min(next, maxLevel)
 
@@ -110,6 +120,7 @@ class EnchantablePetArmorListener : Listener {
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPetDamage(event: EntityDamageEvent) {
+        if (!plugin.config.getBoolean("enchantable-pet-armor.enabled", true)) return
         val entity = event.entity as? LivingEntity ?: return
         if (!PET_ENTITY_TYPES.contains(entity.type)) return
 
@@ -160,6 +171,7 @@ class EnchantablePetArmorListener : Listener {
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPetThornsDamage(event: EntityDamageByEntityEvent) {
+        if (!plugin.config.getBoolean("enchantable-pet-armor.enabled", true)) return
         val entity = event.entity as? LivingEntity ?: return
         if (!PET_ENTITY_TYPES.contains(entity.type)) return
 
@@ -173,7 +185,6 @@ class EnchantablePetArmorListener : Listener {
             if (random.nextDouble() < chance) {
                 val thornsDamage = 1.0 + random.nextInt(4)
                 attacker.damage(thornsDamage, entity)
-
                 entity.world.playSound(entity.location, Sound.ENCHANT_THORNS_HIT, 1.0f, 1.0f)
                 damagePetArmorDurability(entity, armor, 2)
             }
@@ -190,14 +201,14 @@ class EnchantablePetArmorListener : Listener {
     }
 
     private fun damagePetArmorDurability(entity: LivingEntity, armor: ItemStack, amount: Int) {
+        if (armor.type.maxDurability <= 0) return
+
         val meta = armor.itemMeta ?: return
         if (meta is Damageable) {
             if (armor.containsEnchantment(Enchantment.UNBREAKING)) {
                 val level = armor.getEnchantmentLevel(Enchantment.UNBREAKING)
                 val chance = 1.0 / (level + 1)
-                if (random.nextDouble() >= chance) {
-                    return
-                }
+                if (random.nextDouble() >= chance) return
             }
 
             val newDamage = meta.damage + amount

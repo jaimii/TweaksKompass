@@ -1,23 +1,16 @@
 package project.kompass.tweakskompass.listener
 
-import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
 import project.kompass.tweakskompass.TweaksKompass
-import project.kompass.tweakskompass.hook.ConsumeFood2Hook
 import project.kompass.tweakskompass.util.isFood
 
 class AlwaysEatListener(private val plugin: TweaksKompass) : Listener {
 
-    private val isAlwaysEatEnabled: Boolean = plugin.config.getBoolean("always-eat-enabled", true)
-
-    init {
-        if (Bukkit.getPluginManager().isPluginEnabled("ConsumeFood2")) {
-            ConsumeFood2Hook.hookAlwaysEat(plugin)
-        }
-    }
+    private val isAlwaysEatEnabled: Boolean
+        get() = plugin.config.getBoolean("food-and-storage.always-eat.enabled", true)
 
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {

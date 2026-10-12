@@ -1,6 +1,6 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.util.KompassUtil
+import project.kompass.tweakskompass.util.TridentUtil
 import project.kompass.tweakskompass.util.isTrident
 import project.kompass.tweakskompass.util.isSpear
 import org.bukkit.NamespacedKey
@@ -63,13 +63,13 @@ class TridentAttributeListener : Listener {
     }
 
     private fun applyTridentAttributes(player: Player, trident: ItemStack?) {
-        applyRangeModifier(player, Attribute.ENTITY_INTERACTION_RANGE, TRIDENT_REACH, KompassUtil.RANGE_KEY)
-        applyRangeModifier(player, Attribute.BLOCK_INTERACTION_RANGE, TRIDENT_REACH, KompassUtil.BLOCK_RANGE_KEY)
+        applyRangeModifier(player, Attribute.ENTITY_INTERACTION_RANGE, TRIDENT_REACH, TridentUtil.RANGE_KEY)
+        applyRangeModifier(player, Attribute.BLOCK_INTERACTION_RANGE, TRIDENT_REACH, TridentUtil.BLOCK_RANGE_KEY)
 
         val speedInstance = player.getAttribute(Attribute.ATTACK_SPEED)
-        if (speedInstance != null && speedInstance.getModifier(KompassUtil.SPEED_KEY) == null) {
+        if (speedInstance != null && speedInstance.getModifier(TridentUtil.SPEED_KEY) == null) {
             speedInstance.addModifier(AttributeModifier(
-                KompassUtil.SPEED_KEY,
+                TridentUtil.SPEED_KEY,
                 0.2,
                 AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlotGroup.MAINHAND
@@ -80,10 +80,10 @@ class TridentAttributeListener : Listener {
     private fun applySpearAttributes(player: Player, spear: ItemStack?) {
         if (spear != null && spear.containsEnchantment(org.bukkit.enchantments.Enchantment.LUNGE)) {
             val speedInstance = player.getAttribute(Attribute.ATTACK_SPEED)
-            if (speedInstance != null && speedInstance.getModifier(KompassUtil.SPEED_KEY) == null) {
+            if (speedInstance != null && speedInstance.getModifier(TridentUtil.SPEED_KEY) == null) {
                 val modifierAmount = LUNGE_ATTACK_SPEED - 1.2
                 speedInstance.addModifier(AttributeModifier(
-                    KompassUtil.SPEED_KEY,
+                    TridentUtil.SPEED_KEY,
                     modifierAmount,
                     AttributeModifier.Operation.ADD_NUMBER,
                     EquipmentSlotGroup.MAINHAND
@@ -104,8 +104,8 @@ class TridentAttributeListener : Listener {
     }
 
     private fun resetAttributes(player: Player) {
-        player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE)?.removeModifier(KompassUtil.RANGE_KEY)
-        player.getAttribute(Attribute.BLOCK_INTERACTION_RANGE)?.removeModifier(KompassUtil.BLOCK_RANGE_KEY)
-        player.getAttribute(Attribute.ATTACK_SPEED)?.removeModifier(KompassUtil.SPEED_KEY)
+        player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE)?.removeModifier(TridentUtil.RANGE_KEY)
+        player.getAttribute(Attribute.BLOCK_INTERACTION_RANGE)?.removeModifier(TridentUtil.BLOCK_RANGE_KEY)
+        player.getAttribute(Attribute.ATTACK_SPEED)?.removeModifier(TridentUtil.SPEED_KEY)
     }
 }
