@@ -17,10 +17,15 @@ class ArrowSpeedListener(private val plugin: TweaksKompass) : Listener {
     fun onEntityShootBow(event: EntityShootBowEvent) {
         if (!plugin.config.getBoolean("arrow-settings.enabled", true)) return
 
-        val arrow = event.projectile as? AbstractArrow ?: return
+        // Safeguard: Never intercept tridents (Drowned, players, or custom mobs)
+        val projectile = event.projectile
+        if (projectile is Trident) return
+
+        val arrow = projectile as? AbstractArrow ?: return
         val shooter = event.entity as? LivingEntity ?: return
         val entityTypeName = shooter.type.name.uppercase()
 
+        // Resolves multipliers for PLAYER, SKELETON, STRAY, BOGGED, PARCHED, PILLAGER, PIGLIN, ILLUSIONER
         val multiplier = plugin.cachedArrowMultipliers[entityTypeName] ?: plugin.globalArrowMultiplier
         if (multiplier <= 0.0 || multiplier == 1.0) return
 
@@ -43,7 +48,10 @@ class ArrowSpeedListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onProjectileHit(event: ProjectileHitEvent) {
-        val arrow = event.entity as? AbstractArrow ?: return
+        val projectile = event.entity
+        if (projectile is Trident) return
+
+        val arrow = projectile as? AbstractArrow ?: return
 
         if (event.hitEntity != null && arrow.shooter is Entity) {
             val hitEntity = event.hitEntity!!

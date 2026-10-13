@@ -89,10 +89,11 @@ arrow-settings:
     GLOBAL: 1.0 # Multiplier applied on top of entity-specific values below
     PLAYER: 1.0
     SKELETON: 1.5
-    PILLAGER: 1.4
-    DROWNED: 1.2
     STRAY: 1.5
     BOGGED: 1.5
+    PARCHED: 1.5
+    PILLAGER: 1.4
+    PIGLIN: 1.4
     ILLUSIONER: 1.5
 
 # =========================================================================
