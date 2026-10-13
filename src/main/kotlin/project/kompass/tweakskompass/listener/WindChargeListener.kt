@@ -19,6 +19,7 @@ class WindChargeListener(private val plugin: TweaksKompass) : Listener {
                 plugin.config.getBoolean("wind-charge.ignore-armor-dampening", true)
     }
 
+    // 1. Neutralize Blast Protection's Explosion Knockback Dampening
     private fun stripBlastProtectionKnockbackResistance(player: Player) {
         val attribute = player.getAttribute(Attribute.EXPLOSION_KNOCKBACK_RESISTANCE) ?: return
         val modifiersToRemove = attribute.modifiers.filter { modifier ->
@@ -53,6 +54,7 @@ class WindChargeListener(private val plugin: TweaksKompass) : Listener {
         })
     }
 
+    // 2. Un-Dampen Residual Resistance in Explosion Knockback
     @EventHandler(priority = EventPriority.LOWEST)
     fun onEntityKnockback(event: EntityKnockbackEvent) {
         if (!isFeatureEnabled()) return

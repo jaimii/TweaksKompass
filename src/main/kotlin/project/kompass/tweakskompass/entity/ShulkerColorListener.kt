@@ -24,7 +24,6 @@ import java.util.EnumMap
 class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
-        // High-performance O(1) EnumMap: Zero runtime string allocations
         private val DYE_MAP: Map<Material, DyeColor> = EnumMap<Material, DyeColor>(Material::class.java).apply {
             for (color in DyeColor.entries) {
                 val mat = Material.getMaterial("${color.name}_DYE")
@@ -39,6 +38,7 @@ class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
         return plugin.config.getBoolean("shulker-colors.enabled", true)
     }
 
+    // 1. Player Dyeing & Washing Interaction
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPlayerInteractShulker(event: PlayerInteractEntityEvent) {
         if (!isFeatureEnabled()) return
@@ -52,9 +52,8 @@ class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
 
         val dyeColor = DYE_MAP[item.type]
 
-        // --- FEATURE A: DYEING SHULKER ---
+        // A. Dyeing Shulker
         if (dyeColor != null) {
-            // Do not consume dye if the Shulker is already this exact color
             if (shulker.color == dyeColor) return
 
             event.isCancelled = true
@@ -74,13 +73,13 @@ class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
             return
         }
 
-        // --- FEATURE B: WASHING SHULKER (Water Bottle resets to default color) ---
+        // B. Washing Shulker (Water Bottle)
         if (plugin.config.getBoolean("shulker-colors.allow-wash", true)) {
             if (item.type == Material.POTION && shulker.color != null) {
                 val meta = item.itemMeta as? PotionMeta ?: return
                 if (meta.basePotionType == PotionType.WATER) {
                     event.isCancelled = true
-                    shulker.color = null // Resets to default vanilla un-dyed purplish color
+                    shulker.color = null
 
                     val loc = shulker.location.add(0.0, 0.5, 0.0)
                     shulker.world.playSound(loc, Sound.ITEM_BOTTLE_EMPTY, 1.0f, 1.0f)
@@ -104,6 +103,7 @@ class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
+    // 2. Dispenser Dyeing
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onDispenserDyeShulker(event: BlockDispenseEvent) {
         if (!isFeatureEnabled()) return
@@ -117,21 +117,17 @@ class ShulkerColorListener(private val plugin: TweaksKompass) : Listener {
         val directional = block.blockData as? Directional ?: return
         val targetBlock = block.getRelative(directional.facing)
 
-        // Find any Shulker positioned in the target block facing the dispenser
         val center = targetBlock.location.add(0.5, 0.5, 0.5)
         val shulker = targetBlock.world.getNearbyEntities(center, 0.6, 0.6, 0.6)
             .filterIsInstance<Shulker>()
             .firstOrNull() ?: return
 
-        // Skip if already matching color
         if (shulker.color == dyeColor) return
 
-        // Cancel the projectile/item spawn completely (no item entities spawn!)
         event.isCancelled = true
         shulker.color = dyeColor
         playDyeEffects(shulker, dyeItem.type)
 
-        // Safely decrement 1 dye from the dispenser container on the next tick
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val dispenserState = block.state as? Dispenser ?: return@Runnable
             val inv = dispenserState.inventory

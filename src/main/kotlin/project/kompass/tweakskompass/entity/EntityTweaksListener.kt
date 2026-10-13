@@ -2,6 +2,9 @@ package project.kompass.tweakskompass.entity
 
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.Particle
+import org.bukkit.Sound
 import org.bukkit.craftbukkit.CraftWorld
 import org.bukkit.craftbukkit.entity.CraftLivingEntity
 import org.bukkit.entity.*
@@ -12,6 +15,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.entity.*
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause
+import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
@@ -19,7 +23,6 @@ import project.kompass.tweakskompass.TweaksKompass
 
 class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
 
-    // Pre-cached primitive flags eliminate YAML lookups inside high-frequency event loops
     private var isIllusionerDarknessEnabled = true
     private var isXpDropsEnabled = true
     private var isPreventFriendlyFireEnabled = true
@@ -47,7 +50,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         isProtectTurtleEggsEnabled = cfg.getBoolean("entity-tweaks.protect-turtle-eggs", true)
     }
 
-    // 1. ILLUSIONER SPELL NERF
+    // 1. Illusioner Spell Nerf (3s Blindness -> 10s Darkness)
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onIllusionerSpellBlindness(event: EntityPotionEffectEvent) {
         if (!isIllusionerDarknessEnabled) return
@@ -74,7 +77,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // 2. ENVIRONMENTAL MOB XP DROPS
+    // 2. Environmental Mob XP Drops
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onMobDeathXp(event: EntityDeathEvent) {
         if (!isXpDropsEnabled) return
@@ -122,7 +125,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         return event is EntityDamageByBlockEvent && event.damager?.type == Material.STONECUTTER
     }
 
-    // 3. PREVENT FRIENDLY FIRE
+    // 3. Prevent Friendly Fire Between Illagers & Skeletons
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onFriendlyFireDamage(event: EntityDamageByEntityEvent) {
         if (!isPreventFriendlyFireEnabled) return
@@ -181,14 +184,14 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
 
     private fun isRaiderOrWitch(entity: Entity): Boolean = entity is Raider || entity is Witch
 
-    // 4. ARMOR STANDS ARMS
+    // 4. Armor Stands Have Arms
     @EventHandler(priority = EventPriority.NORMAL)
     fun onArmorStandSpawn(event: EntitySpawnEvent) {
         if (!isArmorStandsHaveArmsEnabled) return
         (event.entity as? ArmorStand)?.setArms(true)
     }
 
-    // 5. IRON GOLEM ZOMBIE VILLAGER PROTECTION
+    // 5. Iron Golems Protect Zombie Villagers
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onGolemTargetZombieVillager(event: EntityTargetLivingEntityEvent) {
         if (!isGolemIgnoreZombieVillagersEnabled) return
@@ -205,7 +208,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // 6. DAYLIGHT BURNING
+    // 6. Daylight Burning Prevention
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onDaylightCombust(event: EntityCombustEvent) {
         if (!isNoDaylightBurningEnabled) return
@@ -217,7 +220,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // 7. ZOMBIFICATION
+    // 7. Overworld Zombification Prevention
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onZombification(event: EntityTransformEvent) {
         if (!isNoOverworldZombificationEnabled) return
@@ -226,7 +229,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // 8. CROP TRAMPLING
+    // 8. Crop Trampling Prevention
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onCropTrample(event: PlayerInteractEvent) {
         if (!isPreventCropTrampleEnabled) return
@@ -251,7 +254,7 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // 9. TURTLE EGG PROTECTION
+    // 9. Turtle Egg Protection
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onPlayerEggStep(event: PlayerInteractEvent) {
         if (!isProtectTurtleEggsEnabled) return
@@ -281,6 +284,47 @@ class EntityTweaksListener(private val plugin: TweaksKompass) : Listener {
         if (!isProtectTurtleEggsEnabled) return
         if (event.player.gameMode == org.bukkit.GameMode.CREATIVE) return
         if (event.block.type == Material.TURTLE_EGG) {
+            event.isCancelled = true
+        }
+    }
+
+    // 10. Axolotl Tweaks: Breed with Tropical Fish & Ignore Passive Mobs
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    fun onAxolotlBreedWithFishItem(event: PlayerInteractEntityEvent) {
+        val axolotl = event.rightClicked as? Axolotl ?: return
+        if (!axolotl.isAdult || !axolotl.canBreed() || axolotl.isLoveMode) return
+
+        val player = event.player
+        val hand = event.hand
+        val item = player.inventory.getItem(hand)
+
+        if (item.type == Material.TROPICAL_FISH) {
+            event.isCancelled = true
+
+            axolotl.setLoveModeTicks(600)
+            axolotl.world.spawnParticle(Particle.HEART, axolotl.location.add(0.0, 0.5, 0.0), 5, 0.2, 0.2, 0.2, 0.0)
+            axolotl.world.playSound(axolotl.location, Sound.ENTITY_GENERIC_EAT, 1.0f, 1.0f)
+
+            if (player.gameMode != org.bukkit.GameMode.CREATIVE) {
+                if (item.amount <= 1) player.inventory.setItem(hand, null) else item.amount -= 1
+            }
+
+            val adv = Bukkit.getAdvancement(NamespacedKey.minecraft("husbandry/breed_an_animal"))
+            if (adv != null) {
+                val progress = player.getAdvancementProgress(adv)
+                if (!progress.isDone) {
+                    progress.remainingCriteria.forEach { progress.awardCriteria(it) }
+                }
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    fun onAxolotlTarget(event: EntityTargetLivingEntityEvent) {
+        val axolotl = event.entity as? Axolotl ?: return
+        val target = event.target ?: return
+
+        if (target is Fish || target is Squid || target is GlowSquid || target is Tadpole) {
             event.isCancelled = true
         }
     }

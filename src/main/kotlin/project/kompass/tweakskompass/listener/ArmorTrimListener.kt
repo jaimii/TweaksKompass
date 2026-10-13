@@ -57,7 +57,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
     }
 
     private fun setupParticleMappings() {
-        // Complete mappings for all 18 vanilla patterns
         patternParticles["SILENCE"] = Particle.SCULK_SOUL
         patternParticles["FLOW"] = Particle.SMALL_GUST
         patternParticles["BOLT"] = Particle.ELECTRIC_SPARK
@@ -95,7 +94,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         for (patternKey in section.getKeys(false)) {
             val upperKey = patternKey.uppercase()
 
-            // 1. Direct scalar "NONE" check (e.g. WAYFINDER: "NONE")
             if (section.isString(patternKey)) {
                 val str = section.getString(patternKey)?.trim()
                 if (str.equals("NONE", ignoreCase = true)) {
@@ -104,7 +102,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
                 }
             }
 
-            // 2. List check (e.g. WAYFINDER: ["NONE"] or WAYFINDER: [])
             val list = section.getStringList(patternKey)
             if (list.isEmpty() || (list.size == 1 && list[0].trim().equals("NONE", ignoreCase = true))) {
                 patternEffects[upperKey] = emptyList()
@@ -223,7 +220,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         if (!isEffectsEnabled) return
         val effects = patternEffects[patternName]
 
-        // If the pattern is not configured or explicitly set to NONE / empty list:
         if (effects == null || effects.isEmpty()) {
             clearEffects(player)
             return
@@ -294,6 +290,7 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
             ?.uppercase()
     }
 
+    // Gold Trim Piglin Pacification
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPiglinTarget(event: EntityTargetLivingEntityEvent) {
         if (!isGoldTrimPacifyEnabled) return

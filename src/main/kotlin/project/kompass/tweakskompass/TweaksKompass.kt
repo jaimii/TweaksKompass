@@ -10,6 +10,7 @@ import project.kompass.tweakskompass.anvil.AnvilNoTooExpensiveListener
 import project.kompass.tweakskompass.anvil.AnvilPacketListener
 import project.kompass.tweakskompass.arrow.ArrowPacketListener
 import project.kompass.tweakskompass.arrow.ArrowTrackingManager
+import project.kompass.tweakskompass.crafting.RecipeManager
 import project.kompass.tweakskompass.entity.*
 import project.kompass.tweakskompass.food.CustomFoodListener
 import project.kompass.tweakskompass.food.CustomFoodManager
@@ -254,6 +255,26 @@ class TweaksKompass : JavaPlugin() {
             invisibilityManager = InvisibilityManager(this)
             InvisibilityPacketListener(invisibilityManager).register()
             pm.registerEvents(InvisibilityListener(this, invisibilityManager), this)
+        }
+
+        // 22. Crafting, Smelting & Redyeing Recipes
+        if (config.getBoolean("crafting-tweaks.enabled", true)) {
+            RecipeManager.registerRecipes(this)
+        }
+
+        // 23. Painting Tweaks
+        if (config.getBoolean("painting-tweaks.enabled", true)) {
+            pm.registerEvents(PaintingTweaksListener(), this)
+        }
+
+        // 24. Shears Looting
+        if (config.getBoolean("shears-looting.enabled", true)) {
+            pm.registerEvents(LootingShearsListener(), this)
+        }
+
+        // 25. Tool & Mining Tweaks
+        if (config.getBoolean("tool-block-tweaks.enabled", true)) {
+            pm.registerEvents(ToolBlockTweaksListener(this), this)
         }
 
         logger.info("TweaksKompass v1.5 loaded.")

@@ -4,7 +4,7 @@
 
 # =========================================================================
 # 1. ANVIL OVERHAUL
-# ==========================================+==============================
+# =========================================================================
 anvil-settings:
   enabled: true
   # Completely removes the vanilla "Too Expensive!" limit (costs of 40+ levels are allowed).
@@ -232,7 +232,19 @@ copper-oxidation:
   effects: true
 
 # =========================================================================
-# 11. CUSTOM ARMOR DURABILITY
+# 11. CRAFTING & SMELTING TWEAKS
+# =========================================================================
+crafting-tweaks:
+  enabled: true
+  # Smelt Raw Iron, Copper, and Gold Blocks directly in Furnaces and Blast Furnaces
+  smeltable-raw-ore-blocks: true
+  # Blast Sand and Red Sand into Glass at 2x speed in Blast Furnaces
+  blast-sand-to-glass: true
+  # Redye Concrete, Concrete Powder, and Terracotta (8 surrounding 1 dye in crafting table)
+  redyeable-blocks: true
+
+# =========================================================================
+# 12. CUSTOM ARMOR DURABILITY
 # =========================================================================
 custom-armor-durability:
   enabled: true
@@ -246,7 +258,7 @@ custom-armor-durability:
   flat-modifier: 0
 
 # =========================================================================
-# 12. CUSTOM FOOD SYSTEM
+# 13. CUSTOM FOOD SYSTEM
 # =========================================================================
 custom-foods:
   enabled: true
@@ -501,7 +513,7 @@ custom-foods:
       Command: []
 
 # =========================================================================
-# 13. ENCHANTABLE PET ARMOR
+# 14. ENCHANTABLE PET ARMOR
 # =========================================================================
 enchantable-pet-armor:
   enabled: true
@@ -511,7 +523,7 @@ enchantable-pet-armor:
   allow-cross-protection: true
 
 # =========================================================================
-# 14. ENTITY TWEAKS
+# 15. ENTITY TWEAKS
 # =========================================================================
 entity-tweaks:
   enabled: true
@@ -553,8 +565,14 @@ entity-tweaks:
   # Protects Turtle Eggs from being trampled or broken (mobs still pathfind to them, but walking on them won't crack them)
   protect-turtle-eggs: true
 
+  # Breed Axolotls with raw Tropical Fish item (awards 'The Parrots and the Bees')
+  axolotl-breed-tropical-fish: true
+
+  # Axolotls ignore passive aquatic mobs (Fish, Squid, Glow Squid, Tadpoles) and hunt only hostiles
+  axolotl-ignore-passives: true
+
 # =========================================================================
-# 15. FAST LEAF DECAY
+# 16. FAST LEAF DECAY
 # =========================================================================
 fast-leaf-decay:
   enabled: true
@@ -575,7 +593,7 @@ fast-leaf-decay:
     - "ALL"
 
 # =========================================================================
-# 16. FOOD & STORAGE EXTENSION
+# 17. FOOD & STORAGE EXTENSION
 # =========================================================================
 food-and-storage:
   # Allows eating even when the hunger bar is full (Paper FoodComponent integration)
@@ -596,14 +614,14 @@ food-and-storage:
     totems: 4
 
 # =========================================================================
-# 17. INVENTORY TOTEM OF UNDYING
+# 18. INVENTORY TOTEM OF UNDYING
 # =========================================================================
 # Activates Totems of Undying from ANY inventory slot (excluding shulkers & bundles)
 inventory-totem:
   enabled: true
 
 # =========================================================================
-# 18. LEAD ANY MOB
+# 19. LEAD ANY MOB
 # =========================================================================
 lead-any-mob:
   enabled: true
@@ -612,7 +630,7 @@ lead-any-mob:
     - "ALL"
 
 # =========================================================================
-# 19. MAGICAL CAMPFIRE
+# 20. MAGICAL CAMPFIRE
 # =========================================================================
 magical-campfire:
   enabled: true
@@ -634,7 +652,17 @@ magical-campfire:
       message: "<cyan>The soul flame restores your energy.</cyan>"
 
 # =========================================================================
-# 20. PET TELEPORTATION
+# 21. PAINTING TWEAKS
+# =========================================================================
+painting-tweaks:
+  enabled: true
+  # Adds Earth, Wind, Fire, and Water into the 2x2 painting placement pool
+  elemental-2x2: true
+  # Sneak right-click an existing painting with a Painting item to cycle variants of the same size
+  cycle-variants: true
+
+# =========================================================================
+# 22. PET TELEPORTATION
 # =========================================================================
 pet-teleportation:
   enabled: true
@@ -660,7 +688,15 @@ pet-teleportation:
   keep-chunk-loaded-seconds: 0
 
 # =========================================================================
-# 21. SHIELD COMBAT SYSTEM
+# 23. SHEARS LOOTING
+# =========================================================================
+shears-looting:
+  enabled: true
+  # Allows applying Looting I-III onto Shears in an Anvil for bonus wool and mushroom drops
+  allow-anvil-enchanting: true
+
+# =========================================================================
+# 24. SHIELD COMBAT SYSTEM
 # =========================================================================
 shield-settings:
   enabled: true
@@ -669,7 +705,7 @@ shield-settings:
   axe-disable-ticks: 100 # Cooldown applied when disabled by an axe (100 ticks = 5 seconds)
 
 # =========================================================================
-# 22. SHULKER DYEING
+# 25. SHULKER DYEING
 # =========================================================================
 shulker-colors:
   enabled: true
@@ -683,7 +719,7 @@ shulker-colors:
   spawn-particles: true
 
 # =========================================================================
-# 23. SNOW PHYSICS & SNOWBALL LAYERS
+# 26. SNOW PHYSICS & SNOWBALL LAYERS
 # =========================================================================
 snow-physics:
   enabled: true
@@ -695,7 +731,7 @@ snow-physics:
   convert-to-snow-block: true
 
 # =========================================================================
-# 24. SPEAR COMBAT
+# 27. SPEAR COMBAT
 # =========================================================================
 spear-settings:
   enabled: true
@@ -703,7 +739,27 @@ spear-settings:
   lunge-fast-cooldown: true
 
 # =========================================================================
-# 25. TRIDENT COMBAT & ENCHANTMENTS
+# 28. TOOL & MINING TWEAKS
+# =========================================================================
+tool-block-tweaks:
+  enabled: true
+  # Budding Amethyst drops when mined with a Silk Touch Pickaxe
+  budding-amethyst-silk-touch: true
+  # Reinforced Deepslate drops when mined ONLY with a Netherite Pickaxe with Silk Touch
+  reinforced-deepslate-silk-touch: true
+  # Pickaxes mine all Glass, Stained Glass, and Panes effectively
+  pickaxe-effective-glass: true
+  # Pickaxes mine all light-emitting blocks (Glowstone, Sea Lanterns, Lamps, Shroomlights, Froglights) effectively
+  pickaxe-effective-light-sources: true
+  # Hoes and Pickaxes mine Cacti effectively
+  hoe-effective-cacti: true
+  # Hoes mine Froglights effectively
+  hoe-effective-froglights: true
+  # Axes mine mob and player skulls effectively
+  axe-effective-skulls: true
+
+# =========================================================================
+# 29. TRIDENT COMBAT & ENCHANTMENTS
 # =========================================================================
 trident-settings:
   enabled: true
@@ -728,7 +784,7 @@ trident-settings:
       end-gateway: CANCEL
 
 # =========================================================================
-# 26. TURTLE SCUTE BRUSHING
+# 30. TURTLE SCUTE BRUSHING
 # =========================================================================
 turtle-brushing:
   enabled: true
@@ -736,7 +792,7 @@ turtle-brushing:
   brush-durability-cost: 16
 
 # =========================================================================
-# 27. VILLAGER INSTANT RESTOCK
+# 31. VILLAGER INSTANT RESTOCK
 # =========================================================================
 villager-restock:
   enabled: true
@@ -754,7 +810,7 @@ villager-restock:
   clear-price-inflation: false
 
 # =========================================================================
-# 28. VOID TELEPORT
+# 32. VOID TELEPORT
 # =========================================================================
 void-teleport:
   enabled: true
@@ -778,7 +834,7 @@ void-teleport:
   message: "<gradient:#4facfe:#00f2fe>You plunge through the cosmic void, falling into the Overworld skies!</gradient>"
 
 # =========================================================================
-# 29. WIND CHARGE & WIND BURST
+# 33. WIND CHARGE & WIND BURST
 # =========================================================================
 wind-charge:
   enabled: true
