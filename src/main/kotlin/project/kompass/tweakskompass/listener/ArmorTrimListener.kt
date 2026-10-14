@@ -5,9 +5,11 @@ import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.Particle
 import org.bukkit.Registry
+import org.bukkit.block.data.BlockData
 import org.bukkit.entity.Piglin
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -42,6 +44,9 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
     private val patternEffects = HashMap<String, List<Pair<PotionEffectType, Int>>>()
     private val patternParticles = HashMap<String, Particle>()
 
+    // Cached block data for particles requiring block parameters (such as FALLING_DUST)
+    private val defaultSandBlockData: BlockData by lazy { Material.SAND.createBlockData() }
+
     private var isEnabled = true
     private var isGoldTrimPacifyEnabled = true
     private var isEffectsEnabled = true
@@ -70,7 +75,7 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         patternParticles["COAST"] = Particle.SPLASH
         patternParticles["EYE"] = Particle.PORTAL
         patternParticles["SNOUT"] = Particle.FLAME
-        patternParticles["WARD"] = Particle.SCULK_CHARGE_POP
+        patternParticles["WARD"] = Particle.SOUL // Fixed: Safe zero-data Ancient City soul particle
         patternParticles["WAYFINDER"] = Particle.HAPPY_VILLAGER
         patternParticles["RAISER"] = Particle.CLOUD
         patternParticles["SHAPER"] = Particle.WAX_ON
@@ -265,11 +270,17 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
         activeSet.add(PotionEffectType.ABSORPTION)
     }
 
+    // Defensive particle spawning: checks dataType to prevent missing parameter exceptions
     private fun spawnTrimParticles(player: Player, patternName: String) {
         if (!isParticlesEnabled) return
         val particle = patternParticles[patternName] ?: return
         val loc = player.location.add(0.0, 1.0, 0.0)
-        player.world.spawnParticle(particle, loc, particleCount, 0.3, 0.5, 0.3, 0.01)
+
+        if (particle.dataType == BlockData::class.java) {
+            player.world.spawnParticle(particle, loc, particleCount, 0.3, 0.5, 0.3, 0.01, defaultSandBlockData)
+        } else {
+            player.world.spawnParticle(particle, loc, particleCount, 0.3, 0.5, 0.3, 0.01)
+        }
     }
 
     private fun clearEffects(player: Player) {
@@ -290,7 +301,6 @@ class ArmorTrimListener(private val plugin: TweaksKompass) : Listener {
             ?.uppercase()
     }
 
-    // Gold Trim Piglin Pacification
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPiglinTarget(event: EntityTargetLivingEntityEvent) {
         if (!isGoldTrimPacifyEnabled) return
