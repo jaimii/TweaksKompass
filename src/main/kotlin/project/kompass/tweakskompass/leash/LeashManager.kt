@@ -3,7 +3,6 @@ package project.kompass.tweakskompass.leash
 import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.World
-import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.player.PlayerTeleportEvent
 import project.kompass.tweakskompass.TweaksKompass
@@ -36,9 +35,10 @@ class LeashManager(private val plugin: TweaksKompass) {
 
     fun teleportLeashed(holder: LivingEntity, fromLocation: Location) {
         val fromWorld = fromLocation.world ?: return
+        // Unnecessary safe-call removed: it.leashHolder is @NotNull when isLeashed is true
         val nearbyLeashed = fromWorld.getNearbyEntities(fromLocation, 16.0, 16.0, 16.0)
             .filterIsInstance<LivingEntity>()
-            .filter { it.isLeashed && it.leashHolder?.uniqueId == holder.uniqueId }
+            .filter { it.isLeashed && it.leashHolder.uniqueId == holder.uniqueId }
 
         for (leashed in nearbyLeashed) {
             teleportLeashed(holder, leashed)

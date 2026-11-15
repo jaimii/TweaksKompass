@@ -14,7 +14,7 @@ class LeashTeleportListener(private val plugin: TweaksKompass) : Listener {
         if (!plugin.leashManager.hasActiveLeashes(player.uniqueId)) return
 
         val fromWorld = event.from.world ?: return
-        val toLoc = event.to ?: return
+        val toLoc = event.to // Non-null in Paper 26.3
         val toWorld = toLoc.world ?: return
 
         if (!plugin.leashManager.isWorldValid(fromWorld) || !plugin.leashManager.isWorldValid(toWorld)) return

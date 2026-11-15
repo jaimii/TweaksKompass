@@ -1,6 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.configuration.file.YamlConfiguration
@@ -12,16 +11,13 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.inventory.EquipmentSlot
-import org.bukkit.inventory.ItemStack
+import project.kompass.tweakskompass.TweaksKompass
 import java.io.File
 import java.io.IOException
 
 class ShieldListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
-        /**
-         * Automatically verifies and enables the Paper setting required for vanilla shield stun behavior.
-         */
         fun patchPaperGlobal(plugin: TweaksKompass) {
             if (!plugin.config.getBoolean("shield-settings.auto-patch-paper-stun", true)) return
 
@@ -53,32 +49,27 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
 
         val player = event.entity as? Player ?: return
 
-        // Vanilla already handled the block natively if isBlocking is true
         if (player.isBlocking || !player.isHandRaised) return
 
-        // Determine which hand is actively raising the shield
         val shieldSlot = resolveActiveShieldSlot(player) ?: return
-        val shieldItem = player.inventory.getItem(shieldSlot) ?: return
+        val shieldItem = player.inventory.getItem(shieldSlot)
+        // Replaced redundant Elvis ?: return; in Paper 26.3 getItem() returns non-null AIR if empty
+        if (shieldItem.type.isAir) return
 
-        // Verify attacker direction within the forward 180-degree horizontal blocking arc
         if (!isFacingAttacker(player, event.damager)) return
 
-        // All checks passed: Cancel damage to eliminate the 5-tick raise delay
         event.isCancelled = true
 
         val isAxe = isAxeAttack(event.damager)
         val axeCooldownTicks = plugin.config.getInt("shield-settings.axe-disable-ticks", 100)
 
         if (isAxe) {
-            // Axe hit disables the shield
             player.setCooldown(Material.SHIELD, axeCooldownTicks)
             player.world.playSound(player.location, Sound.ITEM_SHIELD_BREAK, 1.0f, 0.8f)
         } else {
-            // Normal hit plays block sound
             player.world.playSound(player.location, Sound.ITEM_SHIELD_BLOCK, 1.0f, 1.0f)
         }
 
-        // Apply shield durability wear
         val damageCost = maxOf(1, event.damage.toInt())
         player.damageItemStack(shieldSlot, damageCost)
     }
@@ -92,7 +83,6 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
         }
 
         if (offHand.type == Material.SHIELD) {
-            // If main hand holds a right-clickable usable item (food, bow, potion), player is using that item instead
             val mainType = mainHand.type
             val isMainHandUsable = mainType.isEdible ||
                     mainType == Material.BOW ||
@@ -115,7 +105,6 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
         val playerEye = player.eyeLocation
         val attackerLoc = if (damager is LivingEntity) damager.eyeLocation else damager.location
 
-        // Calculate horizontal direction vectors (Y = 0 avoids vertical tilt errors)
         val toAttacker = attackerLoc.toVector().subtract(playerEye.toVector()).setY(0.0)
         val playerFacing = playerEye.direction.setY(0.0)
 
@@ -124,7 +113,6 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
         toAttacker.normalize()
         playerFacing.normalize()
 
-        // Dot product >= 0.0 corresponds to an angle <= 90 degrees (180-degree forward arc)
         return playerFacing.dot(toAttacker) >= 0.0
     }
 

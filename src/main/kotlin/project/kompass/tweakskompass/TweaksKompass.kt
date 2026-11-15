@@ -2,15 +2,21 @@ package project.kompass.tweakskompass
 
 import com.github.retrooper.packetevents.PacketEvents
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder
+import org.bukkit.Statistic
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.EntityType
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.Vector
 import project.kompass.tweakskompass.anvil.AnvilNoTooExpensiveListener
 import project.kompass.tweakskompass.anvil.AnvilPacketListener
 import project.kompass.tweakskompass.arrow.ArrowPacketListener
+import project.kompass.tweakskompass.arrow.ArrowSpeedListener
 import project.kompass.tweakskompass.arrow.ArrowTrackingManager
 import project.kompass.tweakskompass.crafting.RecipeManager
+import project.kompass.tweakskompass.dragon.SurfaceSpawnListener
+import project.kompass.tweakskompass.dragon.SurfaceSpawnManager
 import project.kompass.tweakskompass.entity.*
 import project.kompass.tweakskompass.food.CustomFoodListener
 import project.kompass.tweakskompass.food.CustomFoodManager
@@ -19,37 +25,43 @@ import project.kompass.tweakskompass.invisibility.InvisibilityManager
 import project.kompass.tweakskompass.invisibility.InvisibilityPacketListener
 import project.kompass.tweakskompass.leash.*
 import project.kompass.tweakskompass.listener.*
+import project.kompass.tweakskompass.listener.PetTweaksListener
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class TweaksKompass : JavaPlugin() {
 
-    // Elytra Handlers
+    // Movement, Combat & World Handlers
     private var speedLimiter: ElytraSpeedLimiterListener? = null
     private var speedometer: ElytraSpeedometerListener? = null
     private var boostJumpHandler: ElytraBoostJumpListener? = null
     private var bombingHandler: ElytraBombingListener? = null
-
-    // Chainmail Sieve
     private var sieveListener: ChainmailSieveListener? = null
-
-    // Fast Leaf Decay
     private var leafDecayListener: FastLeafDecayListener? = null
-
-    // Void Teleport
     private var voidTeleportListener: VoidTeleportListener? = null
+    private var minecartSpeedListener: MinecartSpeedListener? = null
+    private var upwardKnockbackListener: UpwardKnockbackListener? = null
+    private var threatTableListener: ThreatTableListener? = null
+    private var shulkerRespawnListener: ShulkerRespawnListener? = null
+    private var endPhantomManager: EndPhantomManager? = null
+    private var petTweaksListener: PetTweaksListener? = null
+    private var entityTweaksListener: EntityTweaksListener? = null
+    private var trimListener: ArmorTrimListener? = null
 
-    // Invisibility System
+    // Managers
+    lateinit var surfaceSpawnManager: SurfaceSpawnManager
+        private set
     lateinit var invisibilityManager: InvisibilityManager
         private set
-
-    // Food System
     lateinit var customFoodManager: CustomFoodManager
         private set
-
-    // Arrow System
     lateinit var arrowTrackingManager: ArrowTrackingManager
         private set
+    lateinit var leashRegistry: LeashRegistry
+        private set
+    lateinit var leashManager: LeashManager
+        private set
+
     val customArrowVelocities = ConcurrentHashMap<UUID, Vector>()
     val customArrowVelocitiesByEntityId = ConcurrentHashMap<Int, Vector>()
     val cachedArrowMultipliers = HashMap<String, Double>()
@@ -59,12 +71,6 @@ class TweaksKompass : JavaPlugin() {
     var isSkeletonPassthroughEnabled: Boolean = true
         private set
     var isIllagerPassthroughEnabled: Boolean = true
-        private set
-
-    // Leash System
-    lateinit var leashRegistry: LeashRegistry
-        private set
-    lateinit var leashManager: LeashManager
         private set
 
     override fun onLoad() {
@@ -146,7 +152,7 @@ class TweaksKompass : JavaPlugin() {
             pm.registerEvents(ArmorDurabilityListener(this), this)
         }
 
-        // 10. Storage & Stacks Extensions
+        // 10. Storage, Stacks & Always-Eat
         if (config.getBoolean("food-and-storage.custom-stacks.enabled", true)) {
             pm.registerEvents(PotionSoupStackListener(this), this)
         }
@@ -154,13 +160,11 @@ class TweaksKompass : JavaPlugin() {
             pm.registerEvents(BundleCapacityListener(this), this)
         }
         if (config.getBoolean("food-and-storage.always-eat.enabled", true)) {
-            pm.registerEvents(AlwaysEatListener(this), this)
+            val alwaysEat = AlwaysEatListener(this).apply { registerPacketListener() }
+            pm.registerEvents(alwaysEat, this)
         }
 
         // 11. Gameplay Enhancements
-        if (config.getBoolean("enchantable-pet-armor.enabled", true)) {
-            pm.registerEvents(EnchantablePetArmorListener(this), this)
-        }
         if (config.getBoolean("wind-charge.enabled", true)) {
             pm.registerEvents(WindChargeListener(this), this)
         }
@@ -188,7 +192,7 @@ class TweaksKompass : JavaPlugin() {
 
         // 12. Entity Tweaks & AI
         if (config.getBoolean("entity-tweaks.enabled", true)) {
-            pm.registerEvents(EntityTweaksListener(this), this)
+            entityTweaksListener = EntityTweaksListener(this).also { pm.registerEvents(it, this) }
             if (config.getBoolean("entity-tweaks.custom-mob-ai", true)) {
                 pm.registerEvents(MobSpawnNMSListener(this), this)
             }
@@ -204,8 +208,8 @@ class TweaksKompass : JavaPlugin() {
 
         // 13. Armor Trims
         if (config.getBoolean("armor-trims.enabled", true)) {
-            val trimListener = ArmorTrimListener(this).apply { startTask() }
-            pm.registerEvents(trimListener, this)
+            trimListener = ArmorTrimListener(this).apply { startTask() }
+            pm.registerEvents(trimListener!!, this)
         }
 
         // 14. Chainmail Sieve
@@ -214,10 +218,10 @@ class TweaksKompass : JavaPlugin() {
             pm.registerEvents(sieveListener!!, this)
         }
 
-        // 15. Pet Teleportation
-        if (config.getBoolean("pet-teleportation.enabled", true)) {
-            val petListener = PetTeleportListener(this).apply { startDistanceCheckTask() }
-            pm.registerEvents(petListener, this)
+        // 15. Consolidated Pet Tweaks
+        if (config.getBoolean("pet-tweaks.enabled", true)) {
+            petTweaksListener = PetTweaksListener(this).apply { startTasks() }
+            pm.registerEvents(petTweaksListener!!, this)
         }
 
         // 16. Copper Armor Hazards
@@ -277,7 +281,42 @@ class TweaksKompass : JavaPlugin() {
             pm.registerEvents(ToolBlockTweaksListener(this), this)
         }
 
-        logger.info("TweaksKompass v1.5 loaded.")
+        // 26. Dragon Surface Spawn Suppression
+        surfaceSpawnManager = SurfaceSpawnManager(this)
+        pm.registerEvents(SurfaceSpawnListener(this, surfaceSpawnManager), this)
+
+        // 27. Minecart Speed & Corner Fix
+        if (config.getBoolean("minecart-settings.enabled", true)) {
+            minecartSpeedListener = MinecartSpeedListener(this).also {
+                pm.registerEvents(it, this)
+                it.applyAllLoadedMinecarts()
+            }
+        }
+
+        // 28. Upward Knockback
+        if (config.getBoolean("upward-knockback.enabled", true)) {
+            upwardKnockbackListener = UpwardKnockbackListener(this).also { pm.registerEvents(it, this) }
+        }
+
+        // 29. MythicMobs-Style Threat Tables
+        if (config.getBoolean("threat-tables.enabled", true)) {
+            threatTableListener = ThreatTableListener(this).also { pm.registerEvents(it, this) }
+        }
+
+        // 30. End City Shulker Respawning
+        if (config.getBoolean("shulker-respawner.enabled", true)) {
+            shulkerRespawnListener = ShulkerRespawnListener(this).also { pm.registerEvents(it, this) }
+        }
+
+        // 31. Hostile End Phantoms & Overworld Suppression
+        if (config.getBoolean("end-phantoms.enabled", true)) {
+            endPhantomManager = EndPhantomManager(this).also {
+                pm.registerEvents(it, this)
+                it.startTasks()
+            }
+        }
+
+        logger.info("TweaksKompass v1.6 loaded for Paper 26.3.")
     }
 
     override fun onDisable() {
@@ -287,6 +326,7 @@ class TweaksKompass : JavaPlugin() {
         if (::invisibilityManager.isInitialized) {
             invisibilityManager.clear()
         }
+        endPhantomManager?.stopTasks()
         leafDecayListener?.cleanup()
         customArrowVelocities.clear()
         customArrowVelocitiesByEntityId.clear()
@@ -315,28 +355,82 @@ class TweaksKompass : JavaPlugin() {
     }
 
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
-        if (command.name.equals("tweakskompass", ignoreCase = true)) {
-            if (args.isNotEmpty() && args[0].equals("reload", ignoreCase = true)) {
-                if (!sender.isOp && !sender.hasPermission("tweakskompass.admin")) {
-                    sender.sendRichMessage("<red>You must be a server operator to execute this command.</red>")
-                    return true
-                }
-                reloadConfig()
-                if (::customFoodManager.isInitialized) {
-                    customFoodManager.reload()
-                }
-                loadCachedArrowMultipliers()
-                speedLimiter?.updateValues()
-                speedometer?.updateValues()
-                boostJumpHandler?.updateValues()
-                bombingHandler?.updateValues()
-                sieveListener?.reloadConfig()
-                leafDecayListener?.reloadConfig()
-                voidTeleportListener?.reloadConfig()
-                sender.sendRichMessage("<green>[TweaksKompass] Configuration, Foods, and Arrows reloaded successfully.</green>")
+        if (!command.name.equals("tweakskompass", ignoreCase = true)) return false
+
+        if (args.isEmpty()) {
+            sender.sendRichMessage("<gold>TweaksKompass v1.6</gold> <gray>by JustJaimii</gray>")
+            sender.sendRichMessage("<yellow>/tweakskompass reload</yellow> <gray>- Reload configuration</gray>")
+            if (sender is Player) {
+                sender.sendRichMessage("<yellow>/tweakskompass surfacespawn [toggle|on|off]</yellow> <gray>- Toggle surface mob spawning</gray>")
+            }
+            return true
+        }
+
+        if (args[0].equals("reload", ignoreCase = true)) {
+            if (!sender.isOp && !sender.hasPermission("tweakskompass.admin")) {
+                sender.sendRichMessage("<red>You must be a server operator to execute this command.</red>")
                 return true
             }
+            reloadConfig()
+            if (::customFoodManager.isInitialized) {
+                customFoodManager.reload()
+            }
+            loadCachedArrowMultipliers()
+            speedLimiter?.updateValues()
+            speedometer?.updateValues()
+            boostJumpHandler?.updateValues()
+            bombingHandler?.updateValues()
+            sieveListener?.reloadConfig()
+            leafDecayListener?.reloadConfig()
+            voidTeleportListener?.reloadConfig()
+            minecartSpeedListener?.reloadConfig()
+            upwardKnockbackListener?.reloadConfig()
+            threatTableListener?.reloadConfig()
+            shulkerRespawnListener?.reloadConfig()
+            petTweaksListener?.reloadConfig()
+            entityTweaksListener?.reloadConfig()
+            trimListener?.reloadConfig()
+            endPhantomManager?.let {
+                it.reloadConfig()
+                it.startTasks()
+            }
+            sender.sendRichMessage("<green>[TweaksKompass] Configuration reloaded successfully.</green>")
+            return true
         }
+
+        if (args[0].equals("surfacespawn", ignoreCase = true)) {
+            val player = sender as? Player ?: run {
+                sender.sendMessage("This command can only be used by players.")
+                return true
+            }
+
+            val hasKilledDragon = player.getStatistic(Statistic.KILL_ENTITY, EntityType.ENDER_DRAGON) > 0
+            if (!hasKilledDragon && !player.isOp) {
+                player.sendRichMessage("<red>You must defeat the Ender Dragon to unlock surface spawn suppression!</red>")
+                return true
+            }
+
+            val current = surfaceSpawnManager.isSuppressed(player.uniqueId)
+            val newState = if (args.size > 1) {
+                when (args[1].lowercase()) {
+                    "on", "enable", "suppress" -> true
+                    "off", "disable", "unsuppress" -> false
+                    else -> !current
+                }
+            } else {
+                !current
+            }
+
+            surfaceSpawnManager.setSuppression(player, newState)
+
+            if (newState) {
+                player.sendRichMessage("<green>Surface hostile mob spawns are now <bold>SUPPRESSED</bold> around you.</green>")
+            } else {
+                player.sendRichMessage("<yellow>Surface hostile mob spawns are now <bold>ALLOWED</bold> around you.</yellow>")
+            }
+            return true
+        }
+
         return false
     }
 }

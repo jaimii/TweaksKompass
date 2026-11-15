@@ -1,5 +1,6 @@
 package project.kompass.tweakskompass.listener
 
+import io.papermc.paper.datacomponent.DataComponentTypes
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -37,68 +38,66 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
         return item != null && STACK_TARGET_MATERIALS.contains(item.type)
     }
 
-    private fun updateStackSize(item: ItemStack?) {
-        if (item == null || item.type.isAir) return
-        if (!plugin.config.getBoolean("food-and-storage.custom-stacks.enabled", true)) return
-
-        val type = item.type
-        val potionLimit = plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
-        val soupLimit = plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
-        val cakeLimit = plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
-        val totemLimit = plugin.config.getInt("food-and-storage.custom-stacks.totems", 4)
-
-        if (type == Material.POTION || type == Material.SPLASH_POTION || type == Material.LINGERING_POTION) {
-            val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != potionLimit)) {
-                meta.setMaxStackSize(potionLimit)
-                item.itemMeta = meta
-            }
-        } else if (type == Material.MUSHROOM_STEW || type == Material.RABBIT_STEW ||
-            type == Material.BEETROOT_SOUP || type == Material.SUSPICIOUS_STEW) {
-            val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != soupLimit)) {
-                meta.setMaxStackSize(soupLimit)
-                item.itemMeta = meta
-            }
-        } else if (type == Material.CAKE) {
-            val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != cakeLimit)) {
-                meta.setMaxStackSize(cakeLimit)
-                item.itemMeta = meta
-            }
-        } else if (type == Material.TOTEM_OF_UNDYING) {
-            val meta = item.itemMeta
-            if (meta != null && (!meta.hasMaxStackSize() || meta.maxStackSize != totemLimit)) {
-                meta.setMaxStackSize(totemLimit)
-                item.itemMeta = meta
-            }
-        }
+    private fun getTargetLimit(type: Material): Int? {
+        if (!plugin.config.getBoolean("food-and-storage.custom-stacks.enabled", true)) return null
+        return when (type) {
+            Material.POTION, Material.SPLASH_POTION, Material.LINGERING_POTION ->
+                plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
+            Material.MUSHROOM_STEW, Material.RABBIT_STEW, Material.BEETROOT_SOUP, Material.SUSPICIOUS_STEW ->
+                plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
+            Material.CAKE ->
+                plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
+            Material.TOTEM_OF_UNDYING ->
+                plugin.config.getInt("food-and-storage.custom-stacks.totems", 4)
+            else -> null
+        }?.coerceIn(1, 99)
     }
 
-    private fun updateInventory(inventory: Inventory?) {
-        if (inventory == null) return
+    // Uses Paper 1.21 native DataComponentTypes.MAX_STACK_SIZE (0 ItemMeta cloning)
+    private fun updateStackSize(item: ItemStack?): Boolean {
+        if (item == null || item.type.isAir) return false
+        val limit = getTargetLimit(item.type) ?: return false
+
+        val currentMax = item.getData(DataComponentTypes.MAX_STACK_SIZE)
+        if (currentMax == null || currentMax != limit) {
+            item.setData(DataComponentTypes.MAX_STACK_SIZE, limit)
+            return true
+        }
+        return false
+    }
+
+    private fun updateInventory(inventory: Inventory?): Boolean {
+        if (inventory == null) return false
+        var modified = false
         for (item in inventory.contents) {
             if (isStackTarget(item)) {
-                updateStackSize(item)
+                if (updateStackSize(item)) {
+                    modified = true
+                }
             }
         }
+        return modified
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onPlayerJoin(event: PlayerJoinEvent) {
-        updateInventory(event.player.inventory)
+        if (updateInventory(event.player.inventory)) {
+            event.player.updateInventory()
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryOpen(event: InventoryOpenEvent) {
-        updateInventory(event.inventory)
-        updateInventory(event.player.inventory)
+        val modTop = updateInventory(event.inventory)
+        val modBot = updateInventory(event.player.inventory)
+        if (modTop || modBot) {
+            (event.player as? Player)?.updateInventory()
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryClick(event: InventoryClickEvent) {
         if (event is InventoryCreativeEvent) return
-        // Critical: Drop click guard prevents ArrayIndexOutOfBoundsException (-999)
         if (event.slot < 0) return
 
         val cursor = event.cursor
@@ -113,12 +112,13 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
         val clickedInv = event.clickedInventory
 
         Bukkit.getScheduler().runTask(plugin, Runnable {
+            var changed = false
             clickedInv?.let {
                 if (slot in 0 until it.size) {
                     val slotItem = it.getItem(slot)
-                    if (isStackTarget(slotItem)) {
-                        updateStackSize(slotItem)
+                    if (updateStackSize(slotItem)) {
                         it.setItem(slot, slotItem)
+                        changed = true
                     }
                 }
             }
@@ -126,9 +126,12 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
             val player = event.whoClicked as? Player
             if (player != null && player.isOnline) {
                 val cursorItem = player.itemOnCursor
-                if (isStackTarget(cursorItem)) {
-                    updateStackSize(cursorItem)
+                if (updateStackSize(cursorItem)) {
                     player.setItemOnCursor(cursorItem)
+                    changed = true
+                }
+                if (changed) {
+                    player.updateInventory()
                 }
             }
         })
@@ -136,68 +139,23 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryCreative(event: InventoryCreativeEvent) {
-        if (event.slot < 0) return
-
         val cursor = event.cursor
         val currentItem = event.currentItem
 
         if (!isStackTarget(cursor) && !isStackTarget(currentItem)) return
 
-        val oldCursor = event.whoClicked.itemOnCursor
-        if (oldCursor != null && oldCursor.type != Material.AIR &&
-            cursor != null && cursor.type != Material.AIR &&
-            oldCursor.isSimilar(cursor)) {
-
-            val type = oldCursor.type
-            val isPotion = (type == Material.POTION || type == Material.SPLASH_POTION || type == Material.LINGERING_POTION)
-            val isSoup = (type == Material.MUSHROOM_STEW || type == Material.RABBIT_STEW ||
-                    type == Material.BEETROOT_SOUP || type == Material.SUSPICIOUS_STEW)
-            val isCake = (type == Material.CAKE)
-            val isTotem = (type == Material.TOTEM_OF_UNDYING)
-
-            if (isPotion || isSoup || isCake || isTotem) {
-                val max = when {
-                    isPotion -> plugin.config.getInt("food-and-storage.custom-stacks.potions", 8)
-                    isSoup -> plugin.config.getInt("food-and-storage.custom-stacks.soups", 16)
-                    isCake -> plugin.config.getInt("food-and-storage.custom-stacks.cakes", 16)
-                    isTotem -> plugin.config.getInt("food-and-storage.custom-stacks.totems", 4)
-                    else -> 64
-                }
-                val newAmount = Math.min(oldCursor.amount + cursor.amount, max)
-
-                val stacked = oldCursor.clone()
-                stacked.amount = newAmount
-                updateStackSize(stacked)
-
-                event.whoClicked.setItemOnCursor(stacked)
-                event.setResult(org.bukkit.event.Event.Result.ALLOW)
-            }
-        } else {
-            updateStackSize(currentItem)
-            updateStackSize(cursor)
+        updateStackSize(currentItem)
+        if (updateStackSize(cursor)) {
+            event.cursor = cursor
         }
 
-        val slot = event.slot
-        val clickedInv = event.clickedInventory
-
+        // NMS handleSetCreativeModeSlot calls setRemoteSlot(), which suppresses slot packets back to the client.
+        // Calling player.updateInventory() on the next tick forces the client to receive the new max_stack_size component!
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val player = event.whoClicked as? Player ?: return@Runnable
             if (player.isOnline) {
-                val cursorItem = player.itemOnCursor
-                if (isStackTarget(cursorItem)) {
-                    updateStackSize(cursorItem)
-                    player.setItemOnCursor(cursorItem)
-                }
-
-                clickedInv?.let {
-                    if (slot in 0 until it.size) {
-                        val slotItem = it.getItem(slot)
-                        if (isStackTarget(slotItem)) {
-                            updateStackSize(slotItem)
-                            it.setItem(slot, slotItem)
-                        }
-                    }
-                }
+                updateInventory(player.inventory)
+                player.updateInventory()
             }
         })
     }
@@ -237,10 +195,10 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
             val player = event.whoClicked as? Player
             if (player != null && player.isOnline) {
                 val cursorItem = player.itemOnCursor
-                if (isStackTarget(cursorItem)) {
-                    updateStackSize(cursorItem)
+                if (updateStackSize(cursorItem)) {
                     player.setItemOnCursor(cursorItem)
                 }
+                player.updateInventory()
             }
         })
     }
@@ -249,20 +207,18 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
     fun onItemSpawn(event: ItemSpawnEvent) {
         val itemEntity = event.entity
         val item = itemEntity.itemStack
-        if (!isStackTarget(item)) return
-
-        updateStackSize(item)
-        itemEntity.itemStack = item
+        if (updateStackSize(item)) {
+            itemEntity.itemStack = item
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onItemPickup(event: EntityPickupItemEvent) {
         val itemEntity = event.item
         val item = itemEntity.itemStack
-        if (!isStackTarget(item)) return
-
-        updateStackSize(item)
-        itemEntity.itemStack = item
+        if (updateStackSize(item)) {
+            itemEntity.itemStack = item
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -275,21 +231,24 @@ class PotionSoupStackListener(private val plugin: TweaksKompass) : Listener {
         val result = event.recipe.result
         if (!isStackTarget(result)) return
 
-        val currentItem = event.currentItem
-        val cursor = event.cursor
-
-        updateStackSize(currentItem)
-        updateStackSize(cursor)
+        updateStackSize(event.currentItem)
+        updateStackSize(event.cursor)
         updateStackSize(result)
+
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            val player = event.whoClicked as? Player ?: return@Runnable
+            if (player.isOnline && updateInventory(player.inventory)) {
+                player.updateInventory()
+            }
+        })
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onPlayerInteract(event: PlayerInteractEvent) {
         if (!event.hasItem()) return
-        val item = event.item
-        if (!isStackTarget(item)) return
-
-        updateStackSize(item)
-        event.player.inventory.setItem(event.hand ?: org.bukkit.inventory.EquipmentSlot.HAND, item)
+        val item = event.item ?: return
+        if (updateStackSize(item)) {
+            event.player.inventory.setItem(event.hand ?: org.bukkit.inventory.EquipmentSlot.HAND, item)
+        }
     }
 }

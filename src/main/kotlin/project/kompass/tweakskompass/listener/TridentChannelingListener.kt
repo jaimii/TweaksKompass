@@ -1,7 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
-import project.kompass.tweakskompass.util.TridentUtil
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import org.bukkit.Bukkit
@@ -14,20 +12,21 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockIgniteEvent
 import org.bukkit.event.entity.*
 import org.bukkit.persistence.PersistentDataType
-import java.util.concurrent.TimeUnit
-import java.util.UUID
+import project.kompass.tweakskompass.TweaksKompass
+import project.kompass.tweakskompass.util.TridentUtil
+import java.time.Duration
 import java.util.HashMap
+import java.util.UUID
 
 class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
 
-    // Memory cache tracking ONLY specific channeling mob drops and experience orbs
+    // Modern java.time.Duration replaces deprecated TimeUnit call
     private val protectedEntitiesCache: Cache<UUID, Boolean> = CacheBuilder.newBuilder()
-        .expireAfterWrite(10, TimeUnit.MINUTES)
+        .expireAfterWrite(Duration.ofMinutes(10))
         .build()
 
     private val recentChannelingDeaths = HashMap<Location, Long>()
 
-    // Handles Channeling logic when a thrown trident hits a target
     @EventHandler
     fun onTridentHit(event: ProjectileHitEvent) {
         val trident = event.entity as? Trident ?: return
@@ -51,7 +50,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Channeling on ANY item during melee attacks
     @EventHandler
     fun onMeleeHit(event: EntityDamageByEntityEvent) {
         if (event.cause == EntityDamageEvent.DamageCause.THORNS) return
@@ -75,7 +73,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Handles lightning damage calculations & selective item/player protection
     @Suppress("DEPRECATION")
     @EventHandler
     fun onLightningDamage(event: EntityDamageByEntityEvent) {
@@ -87,35 +84,29 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
             PersistentDataType.BYTE
         )
 
-        // 1. Item & XP Orb Damage Logic
         if (entity is Item || entity is ExperienceOrb) {
-            // NATURAL LIGHTNING: Always destroys all items/orbs!
             if (!isChanneling) {
                 event.damage = 5.0
                 return
             }
 
-            // CHANNELING LIGHTNING: Only protect drops from the killed mob (in cache).
-            // Player-thrown items or regular items on the ground will NOT be in cache and get destroyed!
             if (protectedEntitiesCache.getIfPresent(entity.uniqueId) != null) {
                 event.isCancelled = true
             } else {
-                event.damage = 2.0 // Destroys non-protected items
+                event.damage = 2.0
             }
             return
         }
 
-        // 2. Prevent player self-damage from their own channeling strike
         if (entity is Player && entity == lightning.causingPlayer) {
             event.isCancelled = true
             return
         }
 
-        // 3. Set lightning damage values
         if (isChanneling) {
-            event.damage = 2.0 // 1 heart
+            event.damage = 2.0
         } else {
-            event.damage = 5.0 // 2.5 hearts (Natural)
+            event.damage = 5.0
         }
 
         if (event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
@@ -123,7 +114,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Track mob deaths caused by channeling
     @EventHandler
     fun onMobDeath(event: EntityDeathEvent) {
         val mob = event.entity as? Mob ?: return
@@ -153,7 +143,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Protects ONLY Item drops and ExperienceOrbs produced by channeling deaths on spawn
     @EventHandler(priority = EventPriority.LOWEST)
     fun onEntitySpawn(event: EntitySpawnEvent) {
         if (recentChannelingDeaths.isEmpty()) return
@@ -189,7 +178,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Cancel environment fire/lava damage ONLY for protected mob drops and XP orbs
     @EventHandler
     fun onEntityDamage(event: EntityDamageEvent) {
         val entity = event.entity
@@ -201,7 +189,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         }
     }
 
-    // Propagate protection to merged item stacks
     @EventHandler
     fun onItemMerge(event: ItemMergeEvent) {
         val target = event.target
@@ -225,7 +212,6 @@ class TridentChannelingListener(private val plugin: TweaksKompass) : Listener {
         protectedEntitiesCache.invalidate(event.entity.uniqueId)
     }
 
-    // Prevents custom channeling lightning from igniting surrounding blocks (creating fire)
     @EventHandler
     fun onBlockIgnite(event: BlockIgniteEvent) {
         if (event.cause == BlockIgniteEvent.IgniteCause.LIGHTNING) {

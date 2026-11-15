@@ -4,15 +4,15 @@ import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal
 import net.minecraft.world.entity.ai.goal.FleeSunGoal
 import net.minecraft.world.entity.ai.goal.FloatGoal
+import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal
 import net.minecraft.world.entity.ai.goal.RangedAttackGoal
 import net.minecraft.world.entity.ai.goal.RestrictSunGoal
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal
+import net.minecraft.world.entity.ai.goal.WrappedGoal
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal
-import net.minecraft.world.entity.ai.memory.MemoryModuleType
 import net.minecraft.world.entity.animal.golem.IronGolem as NmsIronGolem
-import net.minecraft.world.entity.monster.Creeper as NmsCreeper
 import net.minecraft.world.entity.monster.Giant as NmsGiant
 import net.minecraft.world.entity.monster.Witch as NmsWitch
 import net.minecraft.world.entity.monster.piglin.Piglin as NmsPiglin
@@ -30,26 +30,27 @@ import project.kompass.tweakskompass.TweaksKompass
 
 class MobSpawnNMSListener(private val plugin: TweaksKompass) : Listener {
 
+    private fun unwrapGoal(goal: Goal): Goal {
+        return if (goal is WrappedGoal) goal.goal else goal
+    }
+
     @EventHandler
     fun onMobSpawn(event: EntitySpawnEvent) {
         if (!plugin.config.getBoolean("entity-tweaks.custom-mob-ai", true)) return
         val entity = event.entity
 
-        // 1. ALL RAIDERS (Illagers)
+        // 1. Raiders (Illagers)
         if (entity is Raider) {
             val nms = (entity as CraftRaider).handle
-
-            // Fear goals: Avoid Giants and Wardens
             nms.goalSelector.addGoal(1, AvoidEntityGoal(nms, NmsGiant::class.java, 24.0f, 1.0, 1.2))
             nms.goalSelector.addGoal(1, AvoidEntityGoal(nms, Warden::class.java, 16.0f, 1.0, 1.2))
 
-            // Attack goals: Target Zombies and Piglins
             nms.targetSelector.addGoal(2, NearestAttackableTargetGoal(nms, NmsZombie::class.java, true))
             nms.targetSelector.addGoal(2, NearestAttackableTargetGoal(nms, NmsPiglin::class.java, true))
             nms.targetSelector.addGoal(2, NearestAttackableTargetGoal(nms, NmsPiglinBrute::class.java, true))
         }
 
-        // 2. WITCHES
+        // 2. Witches
         else if (entity is Witch) {
             val nms = (entity as CraftWitch).handle
             nms.goalSelector.removeAllGoals { true }
@@ -59,27 +60,29 @@ class MobSpawnNMSListener(private val plugin: TweaksKompass) : Listener {
             nms.goalSelector.addGoal(2, RangedAttackGoal(nms, 1.0, 15, 12.0f))
             nms.goalSelector.addGoal(3, WaterAvoidingRandomStrollGoal(nms, 1.0))
 
-            // Retain Player aggression & retaliation while adding undead/piglin targets
             nms.targetSelector.addGoal(1, HurtByTargetGoal(nms))
             nms.targetSelector.addGoal(2, NearestAttackableTargetGoal(nms, NmsPlayer::class.java, true))
             nms.targetSelector.addGoal(3, NearestAttackableTargetGoal(nms, NmsZombie::class.java, true))
             nms.targetSelector.addGoal(4, NearestAttackableTargetGoal(nms, NmsPiglin::class.java, true))
         }
 
-        // 3. ZOMBIES
+        // 3. Zombies
         else if (entity is Zombie) {
             val nms = (entity as CraftZombie).handle
             nms.targetSelector.addGoal(2, NearestAttackableTargetGoal(nms, NmsRaider::class.java, true))
             nms.targetSelector.addGoal(3, NearestAttackableTargetGoal(nms, NmsWitch::class.java, true))
         }
 
-        // 4. SKELETONS, STRAYS & BOGGED (Sun avoidance purge)
+        // 4. Skeletons, Strays, Bogged, Parched (Sun-avoidance purge)
         else if (entity is AbstractSkeleton) {
             val nms = (entity as CraftAbstractSkeleton).handle
-            nms.goalSelector.removeAllGoals { it is FleeSunGoal || it is RestrictSunGoal }
+            nms.goalSelector.removeAllGoals { goal ->
+                val inner = unwrapGoal(goal)
+                inner is FleeSunGoal || inner is RestrictSunGoal
+            }
         }
 
-        // 5. GIANTS (Functional AI restored)
+        // 5. Giants
         else if (entity is Giant) {
             val nms = (entity as CraftGiant).handle
             nms.goalSelector.addGoal(0, MeleeAttackGoal(nms, 1.0, true))
@@ -91,30 +94,25 @@ class MobSpawnNMSListener(private val plugin: TweaksKompass) : Listener {
             nms.getAttribute(Attributes.FOLLOW_RANGE)?.baseValue = 48.0
         }
 
-        // 6. PIGLINS
-        else if (entity is Piglin) {
-            entity.isImmuneToZombification = true
-            val nms = (entity as CraftPiglin).handle
-            nms.brain.eraseMemory(MemoryModuleType.ATTACK_TARGET)
-        }
-
-        // 7. PIGLIN BRUTES
-        else if (entity is PiglinBrute) {
+        // 6. Piglins & Piglin Brutes (Smart-cast avoids redundant casting warning)
+        else if (entity is PiglinAbstract) {
             entity.isImmuneToZombification = true
         }
 
-        // 8. HOGLINS
+        // 7. Hoglins
         else if (entity is Hoglin) {
             entity.isImmuneToZombification = true
         }
 
-        // 9. IRON GOLEMS (Clear vanilla targets so GolemAttackTask controls targeting without conflict)
+        // 8. Iron Golems (Purge vanilla target goals so GolemAttackTask controls targeting)
         else if (entity is IronGolem) {
             val nms = (entity as CraftIronGolem).handle
-            nms.targetSelector.removeAllGoals { it is NearestAttackableTargetGoal<*> }
+            nms.targetSelector.removeAllGoals { goal ->
+                unwrapGoal(goal) is NearestAttackableTargetGoal<*>
+            }
         }
 
-        // 10. CREEPERS (Flee from Iron Golems)
+        // 9. Creepers (Flee from Iron Golems)
         else if (entity is Creeper) {
             val nms = (entity as CraftCreeper).handle
             nms.goalSelector.addGoal(1, AvoidEntityGoal(nms, NmsIronGolem::class.java, 16.0f, 1.0, 1.2))

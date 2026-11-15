@@ -11,7 +11,7 @@ class GolemAttackTask(private val plugin: TweaksKompass) : BukkitRunnable() {
         if (!plugin.config.getBoolean("entity-tweaks.golem-attack-system", true)) return
 
         for (world in Bukkit.getWorlds()) {
-            // 1. IRON GOLEMS
+            // 1. Iron Golems
             val ironGolems = world.getEntitiesByClass(IronGolem::class.java)
             for (golem in ironGolems) {
                 if (!golem.isValid || golem.isDead) continue
@@ -27,10 +27,9 @@ class GolemAttackTask(private val plugin: TweaksKompass) : BukkitRunnable() {
 
                 val golemLoc = golem.location
 
-                // Single-pass inspection: Evaluates all threats simultaneously with 0 extra list allocations
                 for (nearby in golem.getNearbyEntities(10.0, 10.0, 10.0)) {
                     if (nearby !is LivingEntity || !nearby.isValid || nearby.isDead) continue
-                    if (nearby is ZombieVillager) continue // Never target curing villagers
+                    if (nearby is ZombieVillager) continue
 
                     val distSq = golemLoc.distanceSquared(nearby.location)
 
@@ -39,7 +38,7 @@ class GolemAttackTask(private val plugin: TweaksKompass) : BukkitRunnable() {
                             closestHighDistSq = distSq
                             closestHighPriority = nearby
                         }
-                    } else if (nearby is Monster) {
+                    } else if (nearby is Monster || nearby is AbstractCubeMob) {
                         if (distSq < closestStandardDistSq) {
                             closestStandardDistSq = distSq
                             closestStandardThreat = nearby
@@ -53,7 +52,7 @@ class GolemAttackTask(private val plugin: TweaksKompass) : BukkitRunnable() {
                 }
             }
 
-            // 2. SNOW GOLEMS
+            // 2. Snow Golems
             val snowGolems = world.getEntitiesByClass(Snowman::class.java)
             for (snowman in snowGolems) {
                 if (!snowman.isValid || snowman.isDead) continue

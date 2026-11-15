@@ -5,6 +5,7 @@ import org.bukkit.Location
 import org.bukkit.Sound
 import org.bukkit.entity.*
 import org.bukkit.potion.PotionEffect
+import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
 import project.kompass.tweakskompass.TweaksKompass
@@ -44,7 +45,10 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                     continue
                 }
 
-                plugin.customArrowVelocities[arrow.uniqueId] = arrow.velocity
+                // Keep both UUID and EntityId velocity caches synced as gravity arcs the arrow
+                val currentVel = arrow.velocity
+                plugin.customArrowVelocities[arrow.uniqueId] = currentVel
+                plugin.customArrowVelocitiesByEntityId[arrow.entityId] = currentVel
 
                 val currentLoc = arrow.getLocation(tempLoc) ?: continue
 
@@ -89,12 +93,10 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                             damage += Math.random() * (damage / 2.0) + 1.0
                         }
 
-                        // Propagate Flame Bow effect
                         if (arrow.fireTicks > 0) {
                             target.fireTicks = maxOf(target.fireTicks, 100)
                         }
 
-                        // Propagate Tipped Arrow effects
                         if (arrow is Arrow) {
                             for (customEffect in arrow.customEffects) {
                                 target.addPotionEffect(customEffect)
@@ -107,9 +109,8 @@ class ArrowTrackingManager(private val plugin: TweaksKompass) {
                             }
                         }
 
-                        // Propagate Spectral Arrow glowing
                         if (arrow is SpectralArrow) {
-                            target.addPotionEffect(PotionEffect(org.bukkit.potion.PotionEffectType.GLOWING, 200, 0))
+                            target.addPotionEffect(PotionEffect(PotionEffectType.GLOWING, 200, 0))
                         }
 
                         target.damage(damage, arrow)

@@ -1,6 +1,5 @@
 package project.kompass.tweakskompass.leash
 
-import project.kompass.tweakskompass.TweaksKompass
 import io.papermc.paper.entity.Leashable
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -8,6 +7,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityUnleashEvent
+import project.kompass.tweakskompass.TweaksKompass
 
 class LeashSnapListener(private val plugin: TweaksKompass) : Listener {
 
@@ -16,34 +16,34 @@ class LeashSnapListener(private val plugin: TweaksKompass) : Listener {
         val entity = event.entity
         if (!entity.isValid || entity.isDead) return
 
-        // Allow programmatic untethering to bypass cancellation so no lead item drops
-        if (plugin.leashManager.isProgrammaticUnleash(entity.uniqueId)) return
+        // 1. Programmatic teleportation / internal untethering: NEVER drop a lead
+        if (plugin.leashManager.isProgrammaticUnleash(entity.uniqueId)) {
+            event.isDropLeash = false
+            return
+        }
 
         if (entity is Leashable) {
             val holder = entity.leashHolder
-
-            if (holder is Player) {
-                plugin.leashManager.untrackLeash(holder.uniqueId, entity.uniqueId)
-            }
-
             if (holder == null || !holder.isValid || holder.isDead) return
             if (holder is Player && !holder.isOnline) return
 
             val reason = event.reason
             val isGlidingPlayer = holder is Player && holder.isGliding
 
+            // 2. Intentional Player Unleash: allow normal release and untrack cleanly
             if (reason == EntityUnleashEvent.UnleashReason.PLAYER_UNLEASH && !isGlidingPlayer) {
+                if (holder is Player) {
+                    plugin.leashManager.untrackLeash(holder.uniqueId, entity.uniqueId)
+                }
                 return
             }
 
-            if (reason == EntityUnleashEvent.UnleashReason.DISTANCE ||
-                reason == EntityUnleashEvent.UnleashReason.UNKNOWN ||
-                isGlidingPlayer
-            ) {
+            // 3. Distance Snapping & Elytra Gliding: Prevent lead breakage and do not drop extra leads
+            if (reason == EntityUnleashEvent.UnleashReason.DISTANCE || isGlidingPlayer) {
                 if (!plugin.leashManager.isWorldValid(entity.world)) return
 
-                // Prevent the lead from breaking/dropping
                 event.isCancelled = true
+                event.isDropLeash = false
 
                 if (entity is LivingEntity && holder is LivingEntity) {
                     if (isGlidingPlayer) {

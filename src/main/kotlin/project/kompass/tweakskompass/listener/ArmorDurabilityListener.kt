@@ -1,6 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import org.bukkit.Material
@@ -11,29 +10,28 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerItemDamageEvent
-import org.bukkit.inventory.ItemStack
+import project.kompass.tweakskompass.TweaksKompass
+import java.time.Duration
 import java.util.EnumSet
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 class ArmorDurabilityListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
-        private val ARMOR_MATERIALS: Set<Material> = EnumSet.noneOf(Material::class.java)
-
-        init {
+        private val ARMOR_MATERIALS: Set<Material> = EnumSet.noneOf(Material::class.java).apply {
             for (material in Material.entries) {
                 val name = material.name
                 if (name.startsWith("LEGACY_")) continue
                 if (name.contains("HELMET") || name.contains("CHESTPLATE") || name.contains("LEGGINGS") || name.contains("BOOTS")) {
-                    (ARMOR_MATERIALS as EnumSet).add(material)
+                    add(material)
                 }
             }
         }
     }
 
+    // Modern java.time.Duration replaces deprecated TimeUnit call
     private val thornsTriggeredTicks: Cache<UUID, Long> = CacheBuilder.newBuilder()
-        .expireAfterWrite(5, TimeUnit.SECONDS)
+        .expireAfterWrite(Duration.ofSeconds(5))
         .build()
 
     @EventHandler
@@ -49,7 +47,7 @@ class ArmorDurabilityListener(private val plugin: TweaksKompass) : Listener {
         if (!plugin.config.getBoolean("custom-armor-durability.enabled", true)) return
 
         val item = event.item
-        if (item == null || !ARMOR_MATERIALS.contains(item.type)) return
+        if (!ARMOR_MATERIALS.contains(item.type)) return
 
         val player = event.player
         var damage = event.damage

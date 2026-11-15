@@ -60,13 +60,12 @@ class ChainmailSieveListener(private val plugin: TweaksKompass) : Listener {
                 for (player in Bukkit.getOnlinePlayers()) {
                     if (!player.isValid || player.isDead || player.gameMode == GameMode.SPECTATOR) continue
 
-                    val helmet = player.inventory.helmet ?: continue
+                    val helmet = player.inventory.helmet // Non-null in Paper 26.3
                     if (helmet.type != Material.CHAINMAIL_HELMET) continue
 
                     val headLoc = player.eyeLocation
                     val world = player.world
 
-                    // Throttled 2-tick bounding box query
                     for (entity in world.getNearbyEntities(headLoc, 1.2, 1.5, 1.2)) {
                         if (entity is FallingBlock) {
                             handleCollision(player, entity, helmet)
@@ -74,7 +73,7 @@ class ChainmailSieveListener(private val plugin: TweaksKompass) : Listener {
                     }
                 }
             }
-        }.runTaskTimer(plugin, 2L, 2L) // 50% CPU reduction over 1-tick loop
+        }.runTaskTimer(plugin, 2L, 2L)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -96,7 +95,7 @@ class ChainmailSieveListener(private val plugin: TweaksKompass) : Listener {
         for (entity in world.getNearbyEntities(blockLoc, 1.2, 1.5, 1.2)) {
             if (entity is Player && entity.isValid && !entity.isDead && entity.gameMode != GameMode.SPECTATOR) {
                 val helmet = entity.inventory.helmet
-                if (helmet != null && helmet.type == Material.CHAINMAIL_HELMET) {
+                if (helmet.type == Material.CHAINMAIL_HELMET) {
                     event.isCancelled = true
                     handleCollision(entity, fallingBlock, helmet)
                     return

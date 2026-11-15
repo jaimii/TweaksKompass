@@ -22,7 +22,6 @@ object AnvilPacketListener : PacketListenerAbstract(PacketListenerPriority.HIGHE
     }
 
     override fun onPacketSend(event: PacketSendEvent) {
-        // FAST-EXIT: If no players are currently in an anvil over level 39, exit in 1 nanosecond
         if (preparing.isEmpty()) return
 
         val player = event.getPlayer<Player>() ?: return
@@ -46,10 +45,12 @@ object AnvilPacketListener : PacketListenerAbstract(PacketListenerPriority.HIGHE
             PacketType.Play.Server.SET_SLOT -> {
                 val level = preparing[uuid] ?: return
                 val wrapper = WrapperPlayServerSetSlot(event)
-                event.postTasks.add(Runnable {
-                    val propertyPacket = WrapperPlayServerWindowProperty(wrapper.windowId, 0, level)
-                    PacketEvents.getAPI().playerManager.sendPacket(player, propertyPacket)
-                })
+                if (wrapper.windowId > 0) {
+                    event.postTasks.add(Runnable {
+                        val propertyPacket = WrapperPlayServerWindowProperty(wrapper.windowId, 0, level)
+                        PacketEvents.getAPI().playerManager.sendPacket(player, propertyPacket)
+                    })
+                }
             }
             else -> {}
         }
@@ -57,7 +58,7 @@ object AnvilPacketListener : PacketListenerAbstract(PacketListenerPriority.HIGHE
 
     fun sendSpoofedCreativeAbilities(player: Player) {
         val wrapper = WrapperPlayServerPlayerAbilities(
-            player.isInvulnerable,
+            player.isMarkedInvulnerable, // Replaced deprecated isInvulnerable
             player.isFlying,
             player.allowFlight,
             true,
@@ -69,7 +70,7 @@ object AnvilPacketListener : PacketListenerAbstract(PacketListenerPriority.HIGHE
 
     fun restoreAbilities(player: Player) {
         val wrapper = WrapperPlayServerPlayerAbilities(
-            player.isInvulnerable,
+            player.isMarkedInvulnerable, // Replaced deprecated isInvulnerable
             player.isFlying,
             player.allowFlight,
             player.gameMode == GameMode.CREATIVE,

@@ -12,6 +12,7 @@ object RecipeManager {
     fun registerRecipes(plugin: TweaksKompass) {
         registerSmeltingRecipes(plugin)
         registerRedyeingRecipes(plugin)
+        registerConversionRecipes(plugin)
     }
 
     private fun registerSmeltingRecipes(plugin: TweaksKompass) {
@@ -53,10 +54,10 @@ object RecipeManager {
         val allPowder = Material.entries.filter { it.name.endsWith("_CONCRETE_POWDER") }
         val allTerracotta = Material.entries.filter { it.name.endsWith("_TERRACOTTA") && it != Material.TERRACOTTA }
 
-        // Pre-allocate choices once to avoid heap allocation churn inside the loop
-        val concreteChoice = RecipeChoice.ExactChoice(allConcrete.map { ItemStack(it) })
-        val powderChoice = RecipeChoice.ExactChoice(allPowder.map { ItemStack(it) })
-        val terracottaChoice = RecipeChoice.ExactChoice(allTerracotta.map { ItemStack(it) })
+        // Use static factory method RecipeChoice.exactChoice to avoid constructor deprecation
+        val concreteChoice = RecipeChoice.exactChoice(allConcrete.map { ItemStack(it) })
+        val powderChoice = RecipeChoice.exactChoice(allPowder.map { ItemStack(it) })
+        val terracottaChoice = RecipeChoice.exactChoice(allTerracotta.map { ItemStack(it) })
 
         for (color in DyeColor.entries) {
             val dye = Material.getMaterial("${color.name}_DYE") ?: continue
@@ -99,6 +100,26 @@ object RecipeManager {
                     Bukkit.addRecipe(recipe)
                 }
             }
+        }
+    }
+
+    private fun registerConversionRecipes(plugin: TweaksKompass) {
+        if (!plugin.config.getBoolean("crafting-tweaks.cobble-to-gravel-to-sand", true)) return
+
+        // 1. Cobblestone -> Gravel
+        val gravelKey = NamespacedKey(plugin, "cobblestone_to_gravel")
+        if (Bukkit.getRecipe(gravelKey) == null) {
+            val recipe = ShapelessRecipe(gravelKey, ItemStack(Material.GRAVEL))
+            recipe.addIngredient(Material.COBBLESTONE)
+            Bukkit.addRecipe(recipe)
+        }
+
+        // 2. Gravel -> Sand
+        val sandKey = NamespacedKey(plugin, "gravel_to_sand")
+        if (Bukkit.getRecipe(sandKey) == null) {
+            val recipe = ShapelessRecipe(sandKey, ItemStack(Material.SAND))
+            recipe.addIngredient(Material.GRAVEL)
+            Bukkit.addRecipe(recipe)
         }
     }
 }

@@ -1,9 +1,5 @@
 package project.kompass.tweakskompass.listener
 
-import project.kompass.tweakskompass.TweaksKompass
-import project.kompass.tweakskompass.boat.BuoyancyController
-import project.kompass.tweakskompass.boat.LaunchTracker
-import project.kompass.tweakskompass.boat.WaterSurfaceSampler
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.block.data.Levelled
@@ -17,6 +13,10 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerInputEvent
 import org.bukkit.event.vehicle.VehicleDestroyEvent
 import org.bukkit.event.vehicle.VehicleMoveEvent
+import project.kompass.tweakskompass.TweaksKompass
+import project.kompass.tweakskompass.boat.BuoyancyController
+import project.kompass.tweakskompass.boat.LaunchTracker
+import project.kompass.tweakskompass.boat.WaterSurfaceSampler
 import kotlin.math.abs
 
 class BoatListener(private val plugin: TweaksKompass) : Listener {
@@ -34,7 +34,6 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
         return if (isBoat(vehicle)) vehicle as? Boat else null
     }
 
-    // 1. BOAT JUMPING (SPACEBAR INPUT)
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     fun onPlayerInput(event: PlayerInputEvent) {
         if (!event.input.isJump) return
@@ -57,7 +56,6 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
         velocity.y = jumpForce
         boat.velocity = velocity
 
-        // Mark boat in launch tracker so buoyancy doesn't cancel the jump arc
         launchTracker.mark(boat, 15L)
 
         val volume = plugin.config.getDouble("better-boats.jump.sound-volume", 1.0).toFloat()
@@ -65,18 +63,15 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
         boat.world.playSound(boat.location, Sound.ENTITY_BOAT_PADDLE_LAND, volume, pitch)
     }
 
-    // 2. SMOOTH BUOYANCY & FROST WALKER FREEZING
     @EventHandler(priority = EventPriority.LOWEST)
     fun onVehicleMove(event: VehicleMoveEvent) {
         val vehicle = event.vehicle
         if (vehicle !is Boat) return
 
         val from = event.from
-        val to = event.to ?: return
+        val to = event.to // Non-null in Paper 26.3
 
-        // --- FEATURE A: FROST BOATS (Freezing water under boat) ---
         if (plugin.config.getBoolean("better-boats.frost-walker.enabled", true)) {
-            // Fast-Exit: Only evaluate freezing when crossing block boundaries
             if (from.blockX != to.blockX || from.blockZ != to.blockZ) {
                 val frostLevel = getFrostWalkerLevel(vehicle)
                 if (frostLevel > 0) {
@@ -85,7 +80,6 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
             }
         }
 
-        // --- FEATURE B: SMOOTH BUOYANCY & UPSTREAM TRAVEL ---
         if (!plugin.config.getBoolean("better-boats.smooth.enabled", true)) return
         if (vehicle.passengers.isEmpty()) return
         if (vehicle.isOnGround || launchTracker.isActive(vehicle)) return
@@ -132,7 +126,8 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
         var highest = 0
         for (passenger in boat.passengers) {
             if (passenger is Player) {
-                val boots = passenger.inventory.boots ?: continue
+                val boots = passenger.inventory.boots
+                if (boots.type.isAir) continue
                 val level = boots.getEnchantmentLevel(Enchantment.FROST_WALKER)
                 if (level > highest) highest = level
             }
@@ -155,15 +150,12 @@ class BoatListener(private val plugin: TweaksKompass) : Listener {
                 val targetX = boatX + dx
                 val targetZ = boatZ + dz
 
-                // Only check 2 blocks vertically at the water surface level
                 for (y in boatY downTo boatY - 1) {
                     val block = world.getBlockAt(targetX, y, targetZ)
                     if (block.type == Material.WATER) {
                         val above = world.getBlockAt(targetX, y + 1, targetZ)
-                        // Fixed: using above.type.isAir instead of above.isAir
                         if (above.type.isAir || (!above.type.isSolid && above.type != Material.WATER)) {
                             val data = block.blockData
-                            // Only freeze source water blocks to match vanilla Frost Walker mechanics
                             if (data is Levelled && data.level == 0) {
                                 block.setType(Material.FROSTED_ICE, true)
                             }

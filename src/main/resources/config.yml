@@ -243,6 +243,8 @@ crafting-tweaks:
   blast-sand-to-glass: true
   # Redye Concrete, Concrete Powder, and Terracotta (8 surrounding 1 dye in crafting table)
   redyeable-blocks: true
+  # Craft Cobblestone into Gravel, and Gravel into Sand (shapeless 1:1)
+  cobble-to-gravel-to-sand: true
 
 # =========================================================================
 # 12. CUSTOM ARMOR DURABILITY
@@ -305,6 +307,12 @@ custom-foods:
     BREAD:
       FoodLevel: 5
       Saturation: 6.0
+      InstantEat: false
+      PotionEffect: []
+      Command: []
+    CAKE:
+      FoodLevel: 2
+      Saturation: 0.4
       InstantEat: false
       PotionEffect: []
       Command: []
@@ -514,17 +522,45 @@ custom-foods:
       Command: []
 
 # =========================================================================
-# 14. ENCHANTABLE PET ARMOR
+# 14. DRAGON SURFACE MOB SUPPRESSION
 # =========================================================================
-enchantable-pet-armor:
+dragon-surface-spawn:
   enabled: true
-  # Allows combining Protection, Fire, Blast, Projectile, Thorns, Unbreaking, and Mending
-  # onto Wolf Armor, Horse Armor, and Nautilus Armor in an anvil.
-  # (Indestructible horse armors are safeguarded against durability deletion).
-  allow-cross-protection: true
+  # Rewards the players with zero surface mob spawning upon killing the Ender Dragon.
+  # This is toggleable through (/tweakskompass surfacespawn) for players who already freed the end.
+  # Radius around the player (in blocks) where surface hostile mob spawns are suppressed:
+  suppression-radius: 96.0
+  # Allows skeleton horse traps and their 4 skeleton riders to still spawn during thunderstorms
+  allow-skeleton-traps: true
 
 # =========================================================================
-# 15. ENTITY TWEAKS
+# 15. END PHANTOMS
+# =========================================================================
+end-phantoms:
+  enabled: true
+  # Prevents phantoms from naturally spawning in the Overworld
+  allow-overworld-spawning: false
+  # Enables natural phantom spawning in The End (automatically hostile to nearby players)
+  allow-end-spawning: true
+  # Chance per interval to spawn a phantom near a player in The End
+  end-spawn-chance: 0.08
+  # Maximum phantoms allowed per chunk (and within spawn-check-radius)
+  max-phantoms-per-chunk: 8
+  spawn-check-radius: 64.0
+  # Interval in ticks between End spawn rolls (200 ticks = 10 seconds)
+  end-spawn-interval-ticks: 200
+  # Prevents phantoms from getting stuck in Chorus Fruit trees
+  movement-improvements:
+    enabled: true
+    stuck-detection-ticks: 40
+    stuck-threshold: 3
+    stuck-distance-threshold: 1.0
+    max-stuck-attempts: 5
+    tree-avoidance-enabled: true
+    tree-avoidance-radius: 3
+
+# =========================================================================
+# 16. ENTITY TWEAKS
 # =========================================================================
 entity-tweaks:
   enabled: true
@@ -572,8 +608,21 @@ entity-tweaks:
   # Axolotls ignore passive aquatic mobs (Fish, Squid, Glow Squid, Tadpoles) and hunt only hostiles
   axolotl-ignore-passives: true
 
+threat-tables:
+  enabled: true
+  # Seconds out of combat before a mob's threat table resets
+  combat-timeout-seconds: 15
+  # Maximum distance (blocks) a target can be to retain top threat priority
+  max-range: 40.0
+  # A new attacker must exceed the current target's threat by this ratio (1.10 = 110%) to pull aggro
+  aggro-switch-ratio: 1.10
+  # Mobs excluded from the threat table system (input "NONE" or [] to allow all mobs)
+  blacklisted-mobs:
+    - "ENDER_DRAGON"
+    - "WARDEN"
+
 # =========================================================================
-# 16. FAST LEAF DECAY
+# 17. FAST LEAF DECAY
 # =========================================================================
 fast-leaf-decay:
   enabled: true
@@ -594,19 +643,19 @@ fast-leaf-decay:
     - "ALL"
 
 # =========================================================================
-# 17. FOOD & STORAGE EXTENSION
+# 18. FOOD & STORAGE EXTENSION
 # =========================================================================
 food-and-storage:
-  # Allows eating even when the hunger bar is full (Paper FoodComponent integration)
+  # Allows eating even when the hunger bar is full.
   always-eat:
     enabled: true
 
-  # Configurable capacity of bundles (how many stacks a single bundle holds)
+  # Configurable capacity of bundles.
   bundle-capacity:
     enabled: true
     stacks: 2 # 2 stacks = 128 items capacity
 
-  # Custom maximum stack sizes (enforced natively via 1.21 item components)
+  # Custom maximum stack sizes.
   custom-stacks:
     enabled: true
     potions: 8
@@ -615,14 +664,14 @@ food-and-storage:
     totems: 4
 
 # =========================================================================
-# 18. INVENTORY TOTEM OF UNDYING
+# 19. INVENTORY TOTEM OF UNDYING
 # =========================================================================
 # Activates Totems of Undying from ANY inventory slot (excluding shulkers & bundles)
 inventory-totem:
   enabled: true
 
 # =========================================================================
-# 19. LEAD ANY MOB
+# 20. LEAD ANY MOB
 # =========================================================================
 lead-any-mob:
   enabled: true
@@ -631,7 +680,7 @@ lead-any-mob:
     - "ALL"
 
 # =========================================================================
-# 20. MAGICAL CAMPFIRE
+# 21. MAGICAL CAMPFIRE
 # =========================================================================
 magical-campfire:
   enabled: true
@@ -650,10 +699,26 @@ magical-campfire:
     range: 3
     actionbar:
       enabled: true
-      message: "<cyan>The soul flame restores your energy.</cyan>"
+      message: "<aqua>The soul flame restores your energy.</aqua>"
 
 # =========================================================================
-# 21. PAINTING TWEAKS
+# 22. MINECART SPEED & CORNER FIX
+# =========================================================================
+minecart-settings:
+  enabled: true
+  # Maximum minecart speed (Vanilla default is 0.4 blocks/tick ~ 8 m/s).
+  # 1.0 is ~20 m/s (2.5x faster), 1.6 is ~32 m/s (4x faster).
+  max-speed: 1.0
+  # Automatically patch purpur.yml's max-speed if running on a Purpur server.
+  auto-patch-purpur: true
+  # Corner safety: smoothly regulates speed on 90-degree turns and prevents minecarts from getting stuck
+  corner-fix:
+    enabled: true
+    # Speed cap applied specifically on curved rails to prevent clipping corner blocks
+    corner-speed: 0.4
+
+# =========================================================================
+# 23. PAINTING TWEAKS
 # =========================================================================
 painting-tweaks:
   enabled: true
@@ -663,41 +728,44 @@ painting-tweaks:
   cycle-variants: true
 
 # =========================================================================
-# 22. PET TELEPORTATION
+# 24. PET TWEAKS
 # =========================================================================
-pet-teleportation:
+pet-tweaks:
   enabled: true
-
-  # Teleport following pets to the player when the player teleports
-  teleport-on-player-teleport: true
-
-  # Teleport following pets when the chunk they are in is about to unload
-  teleport-on-chunk-unload: true
-
-  # Teleport following pets if they get stranded too far behind the player
-  distance-teleport:
+  # Allows for pet armor, such as horse armor, nautilus, and wolf armor to be enchantable.
+  armor:
     enabled: true
-    # Maximum distance before following pets catch up (blocks)
-    max-distance: 24.0
-    # Scan interval in ticks (60 ticks = 3 seconds)
-    check-interval: 60
-
-  # Allow following pets to teleport across dimensions / worlds to follow their owner
-  cross-world: true
-
-  # Optional: Keep the origin chunk loaded for X seconds after a player teleports (0 = disabled)
-  keep-chunk-loaded-seconds: 0
+    # Allows for cross protection enchantments like Protection & Fire Protection together.
+    allow-cross-protection: true
+  # Pets will teleport to you even if they are on water as long as the player teleports or chunk is unloaded.
+  teleportation:
+    enabled: true
+    teleport-on-player-teleport: true
+    teleport-on-chunk-unload: true
+    cross-world: true
+    keep-chunk-loaded-seconds: 0
+    distance-teleport:
+      enabled: true
+      max-distance: 24.0
+      check-interval: 60
+  # Pets will retreat when on low health.
+  retreat:
+    enabled: true
+    health-threshold: 0.30
+    flee-to-owner: true
+    play-sound: true
+    alert-owner: true
 
 # =========================================================================
-# 23. SHEARS LOOTING
+# 25. SHEARS LOOTING
 # =========================================================================
 shears-looting:
   enabled: true
-  # Allows applying Looting I-III onto Shears in an Anvil for bonus wool and mushroom drops
+  # Allows applying Looting I-III onto Shears in an Anvil for bonus wool and mushroom drops.
   allow-anvil-enchanting: true
 
 # =========================================================================
-# 24. SHIELD COMBAT SYSTEM
+# 26. SHIELD COMBAT SYSTEM
 # =========================================================================
 shield-settings:
   enabled: true
@@ -706,7 +774,7 @@ shield-settings:
   axe-disable-ticks: 100 # Cooldown applied when disabled by an axe (100 ticks = 5 seconds)
 
 # =========================================================================
-# 25. SHULKER DYEING
+# 27. SHULKER MODULES
 # =========================================================================
 shulker-colors:
   enabled: true
@@ -719,8 +787,15 @@ shulker-colors:
   # Emit dye particles when applied
   spawn-particles: true
 
+shulker-respawner:
+  enabled: true
+  # Chance (0.0 to 1.0) for an Enderman spawning on Purpur inside an End City to become a Shulker
+  enderman-to-shulker-chance: 0.75
+  # Minimum distance (blocks) required from any other Shulker before a new one can spawn
+  radius-between-spawns: 10.0
+
 # =========================================================================
-# 26. SNOW PHYSICS & SNOWBALL LAYERS
+# 28. SNOW PHYSICS & SNOWBALL LAYERS
 # =========================================================================
 snow-physics:
   enabled: true
@@ -732,7 +807,7 @@ snow-physics:
   convert-to-snow-block: true
 
 # =========================================================================
-# 27. SPEAR COMBAT
+# 29. SPEAR COMBAT
 # =========================================================================
 spear-settings:
   enabled: true
@@ -740,7 +815,7 @@ spear-settings:
   lunge-fast-cooldown: true
 
 # =========================================================================
-# 28. TOOL & MINING TWEAKS
+# 30. TOOL & MINING TWEAKS
 # =========================================================================
 tool-block-tweaks:
   enabled: true
@@ -760,7 +835,7 @@ tool-block-tweaks:
   axe-effective-skulls: true
 
 # =========================================================================
-# 29. TRIDENT COMBAT & ENCHANTMENTS
+# 31. TRIDENT COMBAT & ENCHANTMENTS
 # =========================================================================
 trident-settings:
   enabled: true
@@ -785,7 +860,7 @@ trident-settings:
       end-gateway: CANCEL
 
 # =========================================================================
-# 30. TURTLE SCUTE BRUSHING
+# 32. TURTLE SCUTE BRUSHING
 # =========================================================================
 turtle-brushing:
   enabled: true
@@ -793,7 +868,27 @@ turtle-brushing:
   brush-durability-cost: 16
 
 # =========================================================================
-# 31. VILLAGER INSTANT RESTOCK
+# 33. UPWARD KNOCKBACK
+# =========================================================================
+upward-knockback:
+  enabled: true
+  # Horizontal knockback multiplier (set to 0.0 for pure vertical knockback, or low like 0.15 for upward launch)
+  horizontal-multiplier: 0.15
+  # Base upward vertical velocity applied on hit
+  vertical-boost: 0.55
+  # Multiplier applied when the attacker is sprinting
+  sprint-multiplier: 1.5
+  # Vertical multiplier applied on critical hits
+  crit-multiplier: 1.35
+  # Additional multiplier per level of Knockback / Punch enchantment
+  kb-enchant-multiplier: 0.5
+  # If true, sprinting and Knockback/Punch enchantments also increase upward vertical height
+  apply-bonuses-to-vertical: true
+  # If false, blocking with a shield negates upward knockback
+  active-on-shield: false
+
+# =========================================================================
+# 34. VILLAGER INSTANT RESTOCK
 # =========================================================================
 villager-restock:
   enabled: true
@@ -811,7 +906,7 @@ villager-restock:
   clear-price-inflation: false
 
 # =========================================================================
-# 32. VOID TELEPORT
+# 35. VOID TELEPORT
 # =========================================================================
 void-teleport:
   enabled: true
@@ -835,7 +930,7 @@ void-teleport:
   message: "<gradient:#4facfe:#00f2fe>You plunge through the cosmic void, falling into the Overworld skies!</gradient>"
 
 # =========================================================================
-# 33. WIND CHARGE & WIND BURST
+# 36. WIND CHARGE & WIND BURST
 # =========================================================================
 wind-charge:
   enabled: true
