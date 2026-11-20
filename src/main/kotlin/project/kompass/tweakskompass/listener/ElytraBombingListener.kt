@@ -6,7 +6,6 @@ import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
-import org.bukkit.entity.Player
 import org.bukkit.entity.TNTPrimed
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -117,11 +116,7 @@ class ElytraBombingListener(private val plugin: TweaksKompass) : Listener {
             tnt.velocity = Vector(0.0, -0.5, 0.0)
         }
 
-        try {
-            player.playSound(spawnLoc, "entity.tnt.primed", org.bukkit.SoundCategory.PLAYERS, 1.0f, 1.0f)
-        } catch (t: Throwable) {
-            player.playSound(spawnLoc, Sound.ENTITY_TNT_PRIMED, 1.0f, 1.0f)
-        }
+        player.playSound(spawnLoc, Sound.ENTITY_TNT_PRIMED, org.bukkit.SoundCategory.PLAYERS, 1.0f, 1.0f)
         player.world.spawnParticle(Particle.SMOKE, spawnLoc, 5, 0.1, 0.1, 0.1, 0.05)
 
         cooldowns[uuid] = now

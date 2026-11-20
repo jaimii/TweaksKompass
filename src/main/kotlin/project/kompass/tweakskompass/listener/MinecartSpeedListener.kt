@@ -4,7 +4,6 @@ import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.data.Rail
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Minecart
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -13,7 +12,6 @@ import org.bukkit.event.vehicle.VehicleCreateEvent
 import org.bukkit.event.vehicle.VehicleMoveEvent
 import org.bukkit.event.world.ChunkLoadEvent
 import project.kompass.tweakskompass.TweaksKompass
-import java.io.File
 import java.util.EnumSet
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -22,7 +20,6 @@ import kotlin.math.sign
 class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
 
     companion object {
-        // O(1) bitmask to filter block types before allocating BlockData wrappers
         private val RAIL_MATERIALS: Set<Material> = EnumSet.of(
             Material.RAIL,
             Material.POWERED_RAIL,
@@ -30,7 +27,6 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
             Material.ACTIVATOR_RAIL
         )
 
-        // Both 90-degree turns and 45-degree slopes require vanilla 0.4 speed to prevent staircase/corner clipping
         private val REGULATED_RAIL_SHAPES: Set<Rail.Shape> = EnumSet.of(
             Rail.Shape.NORTH_EAST,
             Rail.Shape.NORTH_WEST,
@@ -48,7 +44,6 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
     private var cornerFixEnabled = true
     private var cornerSpeed = 0.4
     private var lookAheadSteps = 2
-    private var autoPatchPurpur = true
 
     init {
         reloadConfig()
@@ -61,38 +56,8 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
         cornerFixEnabled = cfg.getBoolean("minecart-settings.corner-fix.enabled", true)
         cornerSpeed = cfg.getDouble("minecart-settings.corner-fix.corner-speed", 0.4).coerceIn(0.1, maxSpeed)
         lookAheadSteps = ceil(maxSpeed).toInt().coerceIn(1, 3)
-        autoPatchPurpur = cfg.getBoolean("minecart-settings.auto-patch-purpur", true)
-
-        if (autoPatchPurpur && isPurpurServer()) {
-            patchPurpurConfig(maxSpeed)
-        }
 
         applyAllLoadedMinecarts()
-    }
-
-    private fun isPurpurServer(): Boolean {
-        return runCatching { Class.forName("org.purpurmc.purpur.PurpurConfig") }.isSuccess ||
-                Bukkit.getName().contains("Purpur", ignoreCase = true) ||
-                Bukkit.getVersion().contains("Purpur", ignoreCase = true)
-    }
-
-    private fun patchPurpurConfig(speed: Double) {
-        val purpurFile = File("purpur.yml")
-        if (!purpurFile.exists()) return
-
-        try {
-            val yaml = YamlConfiguration.loadConfiguration(purpurFile)
-            val path = "world-settings.default.gameplay-mechanics.minecart.max-speed"
-            val current = yaml.getDouble(path, 0.4)
-
-            if (current != speed) {
-                yaml.set(path, speed)
-                yaml.save(purpurFile)
-                plugin.logger.info("[MinecartSpeed] Patched '$path' in purpur.yml to $speed.")
-            }
-        } catch (e: Exception) {
-            plugin.logger.warning("[MinecartSpeed] Failed to patch purpur.yml: ${e.message}")
-        }
     }
 
     fun applyAllLoadedMinecarts() {
@@ -135,14 +100,11 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
         val toY = to.blockY
         val toZ = to.blockZ
 
-        // 1. Block-Boundary Fast-Exit: Skips ~70% of ticks when moving inside the same block
         if (from.blockX == toX && from.blockY == toY && from.blockZ == toZ) {
             return
         }
 
         val world = to.world ?: return
-
-        // 2. Zero-allocation delta math (avoids cloning minecart.velocity Vector on every move)
         val deltaX = to.x - from.x
         val deltaZ = to.z - from.z
 
@@ -151,7 +113,6 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
                 minecart.maxSpeed = cornerSpeed
             }
 
-            // Only allocate and mutate velocity if the cart is currently exceeding cornerSpeed
             if (abs(deltaX) > cornerSpeed || abs(deltaZ) > cornerSpeed) {
                 val vel = minecart.velocity
                 vel.x = vel.x.coerceIn(-cornerSpeed, cornerSpeed)
@@ -186,7 +147,6 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
             val nextX = x + dx * step
             val nextZ = z + dz * step
 
-            // Prevent synchronous chunk loads if a cart approaches an unloaded chunk border
             if (!world.isChunkLoaded(nextX shr 4, nextZ shr 4)) {
                 return true
             }
@@ -200,7 +160,6 @@ class MinecartSpeedListener(private val plugin: TweaksKompass) : Listener {
         return false
     }
 
-    // Filters by allocation-free world.getType() before creating a CraftBlockData wrapper
     private fun getRailShapeAt(world: World, x: Int, y: Int, z: Int): Rail.Shape? {
         if (RAIL_MATERIALS.contains(world.getType(x, y, z))) {
             return (world.getBlockData(x, y, z) as? Rail)?.shape

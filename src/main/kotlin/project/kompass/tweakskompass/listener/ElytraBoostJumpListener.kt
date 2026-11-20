@@ -191,11 +191,12 @@ class ElytraBoostJumpListener(private val plugin: TweaksKompass) : Listener {
     }
 
     private fun playSound(player: Player, loc: Location, soundKey: String, volume: Float, pitch: Float) {
-        try {
-            player.playSound(loc, soundKey, org.bukkit.SoundCategory.PLAYERS, volume, pitch)
-        } catch (t: Throwable) {
-            player.playSound(loc, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f)
-        }
+        val key = NamespacedKey.fromString(soundKey.lowercase()) ?: NamespacedKey.minecraft(soundKey.lowercase())
+        val resolvedSound = io.papermc.paper.registry.RegistryAccess.registryAccess()
+            .getRegistry(io.papermc.paper.registry.RegistryKey.SOUND_EVENT)
+            .get(key) ?: Sound.BLOCK_NOTE_BLOCK_PLING
+
+        player.playSound(loc, resolvedSound, SoundCategory.PLAYERS, volume, pitch)
     }
 
     private fun spawnParticle(player: Player, loc: Location, particleKey: String, count: Int) {

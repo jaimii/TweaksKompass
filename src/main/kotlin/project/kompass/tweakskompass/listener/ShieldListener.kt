@@ -2,7 +2,6 @@ package project.kompass.tweakskompass.listener
 
 import org.bukkit.Material
 import org.bukkit.Sound
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Entity
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -14,6 +13,8 @@ import org.bukkit.inventory.EquipmentSlot
 import project.kompass.tweakskompass.TweaksKompass
 import java.io.File
 import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 class ShieldListener(private val plugin: TweaksKompass) : Listener {
 
@@ -21,24 +22,34 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
         fun patchPaperGlobal(plugin: TweaksKompass) {
             if (!plugin.config.getBoolean("shield-settings.auto-patch-paper-stun", true)) return
 
-            val paperGlobalFile = File("config/paper-global.yml")
+            val serverRoot = plugin.dataFolder.absoluteFile.parentFile?.parentFile ?: File(".")
+            val paperGlobalFile = File(serverRoot, "config/paper-global.yml")
             if (!paperGlobalFile.exists()) return
 
             try {
-                val yaml = YamlConfiguration.loadConfiguration(paperGlobalFile)
-                val path = "unsupported-settings.skip-vanilla-damage-tick-when-shield-blocked"
-                val isAlreadyEnabled = yaml.getBoolean(path, false)
+                val path = paperGlobalFile.toPath()
+                val lines = Files.readAllLines(path, StandardCharsets.UTF_8)
+                var modified = false
 
-                if (!isAlreadyEnabled) {
-                    yaml.set(path, true)
-                    yaml.save(paperGlobalFile)
-                    plugin.logger.info("[ShieldSystem] Enabled '$path' in paper-global.yml to restore vanilla shield-stun.")
+                for (i in lines.indices) {
+                    val line = lines[i]
+                    val trimmed = line.trim()
+                    if (trimmed.startsWith("skip-vanilla-damage-tick-when-shield-blocked:") && trimmed.contains("false")) {
+                        lines[i] = line.replace("false", "true")
+                        modified = true
+                        break
+                    }
+                }
+
+                if (modified) {
+                    Files.write(path, lines, StandardCharsets.UTF_8)
+                    plugin.logger.info("[ShieldSystem] Enabled 'skip-vanilla-damage-tick-when-shield-blocked' in config/paper-global.yml.")
                     plugin.logger.warning("[ShieldSystem] Please restart the server once for Paper's shield-stun setting to take effect.")
                 }
             } catch (e: IOException) {
-                plugin.logger.warning("[ShieldSystem] Failed to save paper-global.yml patch: ${e.message}")
-            } catch (t: Throwable) {
-                plugin.logger.warning("[ShieldSystem] Could not inspect paper-global.yml: ${t.message}")
+                plugin.logger.warning("[ShieldSystem] Failed to read or write config/paper-global.yml: ${e.message}")
+            } catch (e: SecurityException) {
+                plugin.logger.warning("[ShieldSystem] Missing file permissions for config/paper-global.yml: ${e.message}")
             }
         }
     }
@@ -48,12 +59,10 @@ class ShieldListener(private val plugin: TweaksKompass) : Listener {
         if (!plugin.config.getBoolean("shield-settings.instant-block", true)) return
 
         val player = event.entity as? Player ?: return
-
         if (player.isBlocking || !player.isHandRaised) return
 
         val shieldSlot = resolveActiveShieldSlot(player) ?: return
         val shieldItem = player.inventory.getItem(shieldSlot)
-        // Replaced redundant Elvis ?: return; in Paper 26.3 getItem() returns non-null AIR if empty
         if (shieldItem.type.isAir) return
 
         if (!isFacingAttacker(player, event.damager)) return
